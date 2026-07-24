@@ -35,7 +35,7 @@ const MOCK_ROWS: SaleRecordRow[] = [
     id: "1",
     conversion_code: "CONV-001",
     submission_type: "direct_sale",
-    customer_name: "John Doe",
+    customer_name: "Musa Simon",
     freight: "—",
     sales_agent_name: "Mary",
     sales_invoice_number: "INV-600",
@@ -50,8 +50,8 @@ const MOCK_ROWS: SaleRecordRow[] = [
     conversion_code: "CONV-002",
     submission_type: "freelancer_lead",
     customer_name: "Jane Wanjiku",
-    freight: "Musa Simon (MUSA.SIMON4289)",
-    sales_agent_name: "Mary",
+    freight: "Musa Simon ",
+    sales_agent_name: "Japheth",
     sales_invoice_number: "INV-601",
     bike_model_sold: "VEO",
     sale_date: "2025-02-20",
@@ -179,7 +179,7 @@ export default function SalesRecordHome() {
         </View>
       </ScrollView>
 
-      {/* ═══ History Modal ═══ */}
+      {/*  History Modal  */}
       <Modal visible={historyOpen} animationType="slide">
         <View style={s.modalScreen}>
           {/* Modal Header */}
@@ -268,7 +268,7 @@ export default function SalesRecordHome() {
         </View>
       </Modal>
 
-      {/* ═══ Detail Modal ═══ */}
+      {/*  Detail Modal  */}
       <Modal visible={!!selectedRow} animationType="fade" transparent>
         <View style={s.detailOverlay}>
           <View style={s.detailCard}>
@@ -311,7 +311,7 @@ export default function SalesRecordHome() {
   )
 }
 
-// ── DetailRow helper ──
+//  DetailRow helper 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={s.detailRow}>
@@ -321,7 +321,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-// ── Styles ──
+//  Styles 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   brandBar: {
