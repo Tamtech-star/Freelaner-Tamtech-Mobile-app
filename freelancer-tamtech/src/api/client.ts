@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+﻿import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import * as SecureStore from 'expo-secure-store'
 import { API_BASE_URL, STORAGE_KEYS } from '../constants/config'
 
@@ -17,7 +17,7 @@ api.interceptors.request.use(
     try {
       const token = await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN)
       if (token && config.headers) {
-        config.headers.Authorization = \Bearer \\
+        config.headers.Authorization = 'Bearer ' + token
       }
     } catch {
       // SecureStore might fail in some environments
@@ -46,4 +46,3 @@ api.interceptors.response.use(
 )
 
 export default api
-

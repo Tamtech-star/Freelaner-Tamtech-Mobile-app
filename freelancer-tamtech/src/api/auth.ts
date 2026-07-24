@@ -1,14 +1,8 @@
-import api from './client'
+﻿import api from './client'
 import * as SecureStore from 'expo-secure-store'
 import { STORAGE_KEYS } from '../constants/config'
 import type { AuthResponse, UserRole, AuthUser } from '../types'
 
-/**
- * Authenticate a sales agent or freelancer via the mobile-login endpoint.
- * The backend distinguishes roles by email:
- *   - tamtechtools@gmail.com  → sales_agent
- *   - any other registered email → freelancer
- */
 export async function mobileLogin(
   email: string,
   password: string,
@@ -20,7 +14,6 @@ export async function mobileLogin(
 
   const { token, role, user } = response.data
 
-  // Persist to secure storage
   await SecureStore.setItemAsync(STORAGE_KEYS.AUTH_TOKEN, token)
   await SecureStore.setItemAsync(STORAGE_KEYS.USER_ROLE, role)
   await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user))
@@ -28,19 +21,12 @@ export async function mobileLogin(
   return { role, user }
 }
 
-/**
- * Clear all stored auth data (logout).
- */
 export async function logout(): Promise<void> {
   await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN)
   await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_ROLE)
   await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA)
 }
 
-/**
- * Retrieve stored auth data on app launch (for session restoration).
- * Returns null if no valid session exists.
- */
 export async function getStoredAuth(): Promise<{
   token: string
   role: UserRole
