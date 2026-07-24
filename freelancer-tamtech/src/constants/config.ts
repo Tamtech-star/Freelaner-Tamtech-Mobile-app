@@ -1,7 +1,7 @@
 import { Platform } from 'react-native'
 
 // Render backend URL
-const PRODUCTION_API_URL = 'https://spirospares.onrendercom/api'
+const PRODUCTION_API_URL = 'https://spirospares.com/api'
 const DEV_API_URL = Platform.select({
   android: 'http://10.0.2.2:3000/api', // Android emulator to localhost
   ios: 'http://localhost:3000/api',
