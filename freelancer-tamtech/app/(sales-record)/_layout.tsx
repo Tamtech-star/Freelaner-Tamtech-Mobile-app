@@ -10,7 +10,6 @@ export default function SalesRecordLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="form" />
-      <Stack.Screen name="preview" />
     </Stack>
   )
 }
