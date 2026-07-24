@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from "react"
 import {
   View,
   Text,
@@ -9,18 +9,21 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-} from 'react-native'
-import { Link, router } from 'expo-router'
-import { useAuthStore } from '../src/store/authStore'
+  ScrollView,
+} from "react-native"
+import { Link, router } from "expo-router"
+import { LinearGradient } from "expo-linear-gradient"
+import { useAuthStore } from "../src/store/authStore"
+import { COLORS, SHADOWS } from "../src/constants/config"
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const { login, isLoading } = useAuthStore()
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Validation Error', 'Please enter both email and password.')
+      Alert.alert("Validation Error", "Please enter both email and password.")
       return
     }
 
@@ -28,65 +31,82 @@ export default function LoginScreen() {
 
     if (result.success) {
       const { role } = useAuthStore.getState()
-      if (role === 'sales_agent') {
-        router.replace('/(sales-record)')
-      } else if (role === 'freelancer') {
-        router.replace('/(freelancer)')
+      if (role === "sales_agent") {
+        router.replace("/(sales-record)")
+      } else if (role === "freelancer") {
+        router.replace("/(freelancer)")
       }
     } else {
-      Alert.alert('Login Failed', result.error || 'Invalid credentials.')
+      Alert.alert("Login Failed", result.error || "Invalid credentials.")
     }
   }
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.brandName}>TAMTECH TOOLS</Text>
-          <Text style={styles.appName}>Freelancer Portal</Text>
-          <Text style={styles.subtitle}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Brand Header */}
+        <View style={styles.headerSection}>
+          <Text style={styles.brandTag}>TAMTECH TOOLS</Text>
+          <Text style={styles.brandTitle}>Freelancer Portal</Text>
+          <Text style={styles.brandSubtitle}>
             Sign in as a sales agent or freelancer
           </Text>
         </View>
 
-        {/* Form */}
-        <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#64748b"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+        {/* Login Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Welcome Back</Text>
+          <Text style={styles.cardSubtitle}>
+            Enter your credentials to continue
+          </Text>
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            placeholderTextColor="#64748b"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              placeholderTextColor={COLORS.placeholder}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor={COLORS.placeholder}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
 
           <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
+            activeOpacity={0.8}
             onPress={handleLogin}
             disabled={isLoading}
+            style={styles.buttonWrapper}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
-            )}
+            <LinearGradient
+              colors={[COLORS.gradientStart, COLORS.gradientEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.gradientButton}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Sign In</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
@@ -97,7 +117,7 @@ export default function LoginScreen() {
             Submit a Referral Without Login
           </Link>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   )
 }
@@ -105,83 +125,100 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: COLORS.bg,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
     paddingHorizontal: 24,
+    paddingVertical: 40,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
+  headerSection: {
+    alignItems: "center",
+    marginBottom: 32,
   },
-  brandName: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 4,
-    color: '#60a5fa',
-    textTransform: 'uppercase',
+  brandTag: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 3,
+    color: COLORS.gradientStart,
+    textTransform: "uppercase",
     marginBottom: 8,
   },
-  appName: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#f8fafc',
-    marginBottom: 8,
+  brandTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.heading,
+    marginBottom: 6,
   },
-  subtitle: {
+  brandSubtitle: {
     fontSize: 14,
-    color: '#94a3b8',
-    textAlign: 'center',
+    color: COLORS.muted,
+    textAlign: "center",
   },
-  form: {
-    gap: 8,
+  card: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    borderRadius: 16,
+    padding: 24,
+    ...SHADOWS.card,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.heading,
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    color: COLORS.muted,
+    marginBottom: 20,
+  },
+  formGroup: {
+    marginBottom: 16,
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#cbd5e1',
-    marginTop: 8,
+    fontWeight: "600",
+    color: COLORS.body,
+    marginBottom: 6,
   },
   input: {
-    backgroundColor: '#1e293b',
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 8,
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: COLORS.heading,
+    backgroundColor: COLORS.inputBg,
+  },
+  buttonWrapper: {
+    marginTop: 8,
+  },
+  gradientButton: {
     paddingVertical: 14,
-    fontSize: 16,
-    color: '#f8fafc',
-  },
-  button: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+    borderRadius: 8,
+    alignItems: "center",
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   footer: {
-    alignItems: 'center',
-    marginTop: 40,
+    alignItems: "center",
+    marginTop: 32,
     gap: 8,
   },
   footerText: {
     fontSize: 13,
-    color: '#64748b',
+    color: COLORS.muted,
   },
   footerLink: {
     fontSize: 14,
-    color: '#60a5fa',
-    fontWeight: '600',
-    textDecorationLine: 'underline',
+    color: COLORS.gradientStart,
+    fontWeight: "600",
   },
 })
