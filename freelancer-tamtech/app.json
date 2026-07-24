@@ -37,7 +37,8 @@
           "photosPermission": "Freelancer-Tamtech needs access to your photos to upload documents.",
           "cameraPermission": "Freelancer-Tamtech needs access to your camera to capture documents."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

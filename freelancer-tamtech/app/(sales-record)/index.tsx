@@ -1,33 +1,84 @@
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, RefreshControl } from "react-native"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Modal,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+} from "react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import { COLORS, SHADOWS } from "../../src/constants/config"
-import type { SaleConversion } from "../../src/types"
 
-const MOCK_SALES: SaleConversion[] = [
+// ── Types ──
+type SaleRecordRow = {
+  id: string
+  conversion_code: string
+  submission_type: "direct_sale" | "freelancer_lead"
+  customer_name: string
+  freight: string
+  sales_agent_name: string
+  sales_invoice_number: string
+  bike_model_sold: string
+  sale_date: string
+  quantity: number
+  commission_kes: string
+  payment_status: string
+}
+
+const MOCK_ROWS: SaleRecordRow[] = [
   {
     id: "1",
-    customer_name: "Musa Simon",
-    customer_type: "individual",
-    phone_number: "0712345678",
-    bike_model: "EKON450M1V2",
-    sale_amount: 85000,
+    conversion_code: "CONV-001",
     submission_type: "direct_sale",
-    status: "completed",
-    created_at: new Date().toISOString(),
+    customer_name: "John Doe",
+    freight: "—",
+    sales_agent_name: "Mary",
+    sales_invoice_number: "INV-600",
+    bike_model_sold: "EKON450M1V2",
+    sale_date: "2025-01-15",
+    quantity: 1,
+    commission_kes: "—",
+    payment_status: "paid",
+  },
+  {
+    id: "2",
+    conversion_code: "CONV-002",
+    submission_type: "freelancer_lead",
+    customer_name: "Jane Wanjiku",
+    freight: "Musa Simon (MUSA.SIMON4289)",
+    sales_agent_name: "Mary",
+    sales_invoice_number: "INV-601",
+    bike_model_sold: "VEO",
+    sale_date: "2025-02-20",
+    quantity: 2,
+    commission_kes: "KES 4,000",
+    payment_status: "submitted",
   },
 ]
 
+const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
+  paid: { bg: "#d1fae5", text: "#065f46" },
+  submitted: { bg: "#dbeafe", text: "#1e40af" },
+  converted: { bg: "#dbeafe", text: "#1e40af" },
+  pending: { bg: "#fef3c7", text: "#92400e" },
+}
+
 export default function SalesRecordHome() {
   const { user, logout } = useAuthStore()
-  const [sales, setSales] = useState<SaleConversion[]>(MOCK_SALES)
+  const [rows] = useState<SaleRecordRow[]>(MOCK_ROWS)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const [selectedRow, setSelectedRow] = useState<SaleRecordRow | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    // TODO: fetch from API in Phase 2
-    setRefreshing(false)
+    setTimeout(() => setRefreshing(false), 1000)
   }, [])
 
   const handleLogout = async () => {
@@ -35,252 +86,398 @@ export default function SalesRecordHome() {
     router.replace("/login")
   }
 
-  const renderSaleItem = ({ item }: { item: SaleConversion }) => (
-    <View style={styles.saleCard}>
-      <View style={styles.saleHeader}>
-        <Text style={styles.saleName}>{item.customer_name}</Text>
-        <View
-          style={[
-            styles.statusBadge,
-            item.status === "completed" ? styles.statusCompleted : styles.statusPending,
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              item.status === "completed" ? styles.statusTextCompleted : styles.statusTextPending,
-            ]}
-          >
-            {item.status}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.saleDetail}>{item.bike_model}</Text>
-      <Text style={styles.salePrice}>KES {item.sale_amount.toLocaleString()}</Text>
-      <Text style={styles.saleDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
-    </View>
-  )
+  const filteredRows = useMemo(() => {
+    if (!search.trim()) return rows
+    const q = search.toLowerCase()
+    return rows.filter(
+      (r) =>
+        r.customer_name.toLowerCase().includes(q) ||
+        r.conversion_code.toLowerCase().includes(q) ||
+        r.sales_invoice_number.toLowerCase().includes(q) ||
+        r.bike_model_sold.toLowerCase().includes(q) ||
+        r.sales_agent_name.toLowerCase().includes(q) ||
+        r.freight.toLowerCase().includes(q)
+    )
+  }, [rows, search])
+
+  const formatDate = (d: string) => {
+    try {
+      return new Date(d).toLocaleDateString("en-KE", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    } catch {
+      return d
+    }
+  }
+
+  const statusBg = (key: string) => STATUS_STYLES[key]?.bg || "#f1f5f9"
+  const statusText = (key: string) => STATUS_STYLES[key]?.text || "#475569"
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Welcome,</Text>
-          <Text style={styles.userName}>{user?.name || "Sales Agent"}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <View style={styles.userBadge}>
-            <Text style={styles.userBadgeText}>SA</Text>
-          </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={s.container}>
+      {/* Brand Bar */}
+      <View style={s.brandBar}>
+        <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
       </View>
 
-      {/* Action Cards */}
-      <View style={styles.actionRow}>
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() => router.push("/(sales-record)/form")}
-        >
-          <Text style={styles.actionIcon}>📝</Text>
-          <Text style={styles.actionTitle}>Record Direct Sale</Text>
-          <Text style={styles.actionDesc}>Capture a new bike sale</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={() =>
-            router.push({ pathname: "/(sales-record)/form", params: { type: "lead_conversion" } })
-          }
-        >
-          <Text style={styles.actionIcon}>🔄</Text>
-          <Text style={styles.actionTitle}>Convert Lead</Text>
-          <Text style={styles.actionDesc}>Convert a freelancer lead</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Sales History */}
-      <Text style={styles.sectionTitle}>Sales History</Text>
-      <FlatList
-        data={sales}
-        renderItem={renderSaleItem}
-        keyExtractor={(item) => item.id}
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gradientStart} />
         }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No sales recorded yet.</Text>
-            <Text style={styles.emptySubtext}>Tap above to record your first sale</Text>
+      >
+        {/* Header with agent name + logout */}
+        <View style={s.headerRow}>
+          <View style={s.headerLeft}>
+            <Text style={s.headerTitle}>Sales Record</Text>
+            <Text style={s.headerSub}>
+              Record a sale from an open lead or add a direct sale
+            </Text>
           </View>
-        }
-        contentContainerStyle={sales.length === 0 ? styles.emptyContainer : undefined}
-      />
+          <View style={s.headerRight}>
+            <View style={s.agentBadge}>
+              <Text style={s.agentBadgeText}>{user?.name || "Agent"}</Text>
+            </View>
+            <TouchableOpacity onPress={handleLogout} style={s.logoutBtn}>
+              <Text style={s.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Two Entry Cards */}
+        <View style={s.cardRow}>
+          {/* Card 1: Record Sales */}
+          <TouchableOpacity
+            onPress={() => router.push("/(sales-record)/form")}
+            style={[s.entryCard, SHADOWS.cardSm]}
+          >
+            <Text style={s.entryLabel}>Record Sales</Text>
+            <Text style={s.entryDesc}>
+              Submit a direct sale or convert an open freelancer lead
+            </Text>
+            <View style={s.entryBtn}>
+              <Text style={s.entryBtnText}>Proceed to Sales Record →</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Card 2: Sales Record History */}
+          <TouchableOpacity
+            onPress={() => setHistoryOpen(true)}
+            style={[s.entryCard, SHADOWS.cardSm]}
+          >
+            <Text style={s.entryLabel}>Sales Record History</Text>
+            <Text style={s.entryDesc}>
+              Click to view all recorded sales (direct sales & freelancer conversions)
+            </Text>
+            <View style={[s.entryBtn, { backgroundColor: "#d1fae5" }]}>
+              <Text style={[s.entryBtnText, { color: "#065f46" }]}>View History →</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* ═══ History Modal ═══ */}
+      <Modal visible={historyOpen} animationType="slide">
+        <View style={s.modalScreen}>
+          {/* Modal Header */}
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Sales Record History</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setHistoryOpen(false)
+                setSelectedRow(null)
+                setSearch("")
+              }}
+              style={s.modalCloseBtn}
+            >
+              <Text style={s.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Search */}
+          <View style={s.searchWrap}>
+            <TextInput
+              placeholder="Search by customer name, code, invoice..."
+              placeholderTextColor="#94a3b8"
+              value={search}
+              onChangeText={setSearch}
+              style={s.searchInput}
+            />
+          </View>
+
+          {/* Count */}
+          <View style={s.countWrap}>
+            <Text style={s.countText}>Total records: {filteredRows.length}</Text>
+          </View>
+
+          {/* List */}
+          {filteredRows.length === 0 ? (
+            <View style={s.emptyWrap}>
+              <Text style={s.emptyText}>
+                {search ? "No records match your search." : "No sales records found."}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredRows}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+              ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => setSelectedRow(item)}
+                  style={[s.historyCard, SHADOWS.cardSm]}
+                >
+                  {/* Row 1: Code + Type Badge */}
+                  <View style={s.histRow1}>
+                    <Text style={s.conversionCode}>{item.conversion_code}</Text>
+                    <View style={[s.typeBadge, { backgroundColor: statusBg(item.payment_status) }]}>
+                      <Text style={[s.typeBadgeText, { color: statusText(item.payment_status) }]}>
+                        {item.submission_type === "direct_sale" ? "Direct Sale" : "Freelancer Lead"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Row 2: Customer + Invoice */}
+                  <Text style={s.customerName}>{item.customer_name}</Text>
+                  <View style={s.histRow2}>
+                    <Text style={s.invoiceNum}>#{item.sales_invoice_number}</Text>
+                    <Text style={s.bikeModel}>{item.bike_model_sold}</Text>
+                    <Text style={s.qtyText}>Qty: {item.quantity}</Text>
+                  </View>
+
+                  {/* Row 3: Date + Agent + Status */}
+                  <View style={s.histRow3}>
+                    <Text style={s.dateText}>{formatDate(item.sale_date)}</Text>
+                    <View style={s.histRight}>
+                      <Text style={s.agentName}>{item.sales_agent_name}</Text>
+                      <View style={[s.statusBadge, { backgroundColor: statusBg(item.payment_status) }]}>
+                        <Text style={[s.statusBadgeText, { color: statusText(item.payment_status) }]}>
+                          {item.payment_status || "N/A"}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
+
+      {/* ═══ Detail Modal ═══ */}
+      <Modal visible={!!selectedRow} animationType="fade" transparent>
+        <View style={s.detailOverlay}>
+          <View style={s.detailCard}>
+            {selectedRow && (
+              <>
+                <Text style={s.detailTitle}>{selectedRow.conversion_code}</Text>
+
+                <View style={s.detailBody}>
+                  <DetailRow label="Type" value={selectedRow.submission_type === "direct_sale" ? "Direct Sale" : "Freelancer Lead"} />
+                  <DetailRow label="Customer" value={selectedRow.customer_name} />
+                  <DetailRow label="Freelancer" value={selectedRow.freight} />
+                  <DetailRow label="Agent" value={selectedRow.sales_agent_name} />
+                  <DetailRow label="Invoice" value={selectedRow.sales_invoice_number} />
+                  <DetailRow label="Bike" value={selectedRow.bike_model_sold} />
+                  <DetailRow label="Date" value={formatDate(selectedRow.sale_date)} />
+                  <DetailRow label="Qty" value={String(selectedRow.quantity)} />
+                  <DetailRow label="Commission" value={selectedRow.commission_kes} />
+                  <View style={s.detailRow}>
+                    <Text style={s.detailLabel}>Status: </Text>
+                    <View style={[s.statusBadge, { backgroundColor: statusBg(selectedRow.payment_status) }]}>
+                      <Text style={[s.statusBadgeText, { color: statusText(selectedRow.payment_status) }]}>
+                        {selectedRow.payment_status || "N/A"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setSelectedRow(null)}
+                  style={s.closeBtn}
+                >
+                  <Text style={s.closeBtnText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-    paddingTop: 60,
-    paddingHorizontal: 16,
-  },
-  header: {
+// ── DetailRow helper ──
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={s.detailRow}>
+      <Text style={s.detailLabel}>{label}: </Text>
+      <Text style={s.detailValue}>{value}</Text>
+    </View>
+  )
+}
+
+// ── Styles ──
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#f8fafc" },
+  brandBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#fff",
+    paddingVertical: 16,
+  },
+  brandText: { fontSize: 20, fontWeight: "700", color: "#1e293b" },
+
+  scroll: { flex: 1, paddingHorizontal: 16 },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
     marginBottom: 24,
   },
-  greeting: {
-    fontSize: 13,
-    color: COLORS.muted,
+  headerLeft: { flex: 1, paddingRight: 16 },
+  headerTitle: { fontSize: 24, fontWeight: "700", color: "#0f172a" },
+  headerSub: { marginTop: 4, fontSize: 14, color: "#64748b" },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  agentBadge: {
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  userName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.heading,
+  agentBadgeText: { fontSize: 14, fontWeight: "700", color: "#1d4ed8" },
+  logoutBtn: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  headerRight: {
+  logoutText: { fontSize: 12, fontWeight: "500", color: "#64748b" },
+
+  cardRow: { gap: 16 },
+  entryCard: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 20,
+  },
+  entryLabel: { fontSize: 12, textTransform: "uppercase", letterSpacing: 1, color: "#64748b" },
+  entryDesc: { marginTop: 8, fontSize: 14, color: "#475569", lineHeight: 20 },
+  entryBtn: {
+    marginTop: 12,
+    alignSelf: "flex-start",
+    backgroundColor: "#eff6ff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  entryBtnText: { fontSize: 12, fontWeight: "700", color: "#1d4ed8" },
+
+  // History Modal
+  modalScreen: { flex: 1, backgroundColor: "#f8fafc" },
+  modalHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  userBadge: {
-    backgroundColor: COLORS.infoBg,
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a" },
+  modalCloseBtn: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 8,
   },
-  userBadgeText: {
-    color: COLORS.info,
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  logoutBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  modalCloseText: { fontSize: 12, fontWeight: "500", color: "#64748b" },
+
+  searchWrap: { paddingHorizontal: 16, paddingVertical: 12 },
+  searchInput: {
+    width: "100%",
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: "#cbd5e1",
     borderRadius: 8,
-  },
-  logoutText: {
-    color: COLORS.error,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 28,
-  },
-  actionCard: {
-    flex: 1,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    borderRadius: 16,
-    padding: 20,
-    ...SHADOWS.cardSm,
-  },
-  actionIcon: {
-    fontSize: 28,
-    marginBottom: 10,
-  },
-  actionTitle: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.heading,
-    marginBottom: 4,
+    color: "#0f172a",
   },
-  actionDesc: {
-    fontSize: 12,
-    color: COLORS.muted,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: COLORS.heading,
-    marginBottom: 12,
-  },
-  saleCard: {
-    backgroundColor: COLORS.card,
+
+  countWrap: { paddingHorizontal: 16, paddingBottom: 8 },
+  countText: { fontSize: 12, color: "#64748b" },
+
+  emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+  emptyText: { fontSize: 14, color: "#64748b" },
+
+  historyCard: {
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: "#e2e8f0",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 10,
-    ...SHADOWS.cardSm,
   },
-  saleHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  saleName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.heading,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  statusCompleted: {
-    backgroundColor: COLORS.successBg,
-  },
-  statusPending: {
-    backgroundColor: COLORS.warningBg,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "capitalize",
-  },
-  statusTextCompleted: {
-    color: COLORS.success,
-  },
-  statusTextPending: {
-    color: COLORS.warning,
-  },
-  saleDetail: {
-    fontSize: 13,
-    color: COLORS.body,
-    marginBottom: 2,
-  },
-  salePrice: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.heading,
-    marginTop: 2,
-  },
-  saleDate: {
-    fontSize: 12,
-    color: COLORS.light,
-    marginTop: 4,
-  },
-  emptyContainer: {
+  histRow1: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  conversionCode: { fontFamily: "monospace", fontSize: 12, fontWeight: "700", color: "#1d4ed8" },
+  typeBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  typeBadgeText: { fontSize: 10, fontWeight: "700" },
+  customerName: { marginTop: 4, fontSize: 14, fontWeight: "600", color: "#1e293b" },
+  histRow2: { marginTop: 4, flexDirection: "row", alignItems: "center", gap: 12 },
+  invoiceNum: { fontFamily: "monospace", fontSize: 12, color: "#64748b" },
+  bikeModel: { fontSize: 12, color: "#64748b" },
+  qtyText: { fontSize: 12, color: "#64748b" },
+  histRow3: { marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  dateText: { fontSize: 12, color: "#94a3b8" },
+  histRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  agentName: { fontSize: 12, color: "#94a3b8" },
+  statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  statusBadgeText: { fontSize: 10, fontWeight: "700" },
+
+  // Detail Modal
+  detailOverlay: {
     flex: 1,
-    justifyContent: "center",
-  },
-  emptyState: {
     alignItems: "center",
-    paddingVertical: 40,
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: 16,
   },
-  emptyText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: COLORS.muted,
-    marginBottom: 4,
+  detailCard: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  emptySubtext: {
-    fontSize: 13,
-    color: COLORS.light,
+  detailTitle: { fontSize: 20, fontWeight: "700", color: "#0f172a", marginBottom: 16 },
+  detailBody: { backgroundColor: "#f8fafc", borderRadius: 12, padding: 16, marginBottom: 16 },
+  detailRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
+  detailLabel: { fontSize: 14, fontWeight: "700", color: "#0f172a" },
+  detailValue: { fontSize: 14, color: "#334155" },
+  closeBtn: {
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
   },
+  closeBtnText: { fontSize: 14, fontWeight: "700", color: "#334155" },
 })

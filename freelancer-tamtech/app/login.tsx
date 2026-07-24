@@ -41,6 +41,23 @@ export default function LoginScreen() {
     }
   }
 
+  // Dev quick-access: bypass login to preview screens
+  const devNavigate = (screen: string) => {
+    // Set a fake auth state so layouts don't redirect away
+    useAuthStore.setState({
+      token: "dev-token",
+      role: screen === "sales" ? "sales_agent" : "freelancer",
+      user: { id: "dev", email: "dev@test.com", name: screen === "sales" ? "Sales Agent" : "Musa Simon" },
+      isAuthenticated: true,
+      isLoading: false,
+    })
+    if (screen === "sales") {
+      router.replace("/(sales-record)")
+    } else if (screen === "freelancer") {
+      router.replace("/(freelancer)")
+    }
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -109,6 +126,28 @@ export default function LoginScreen() {
             </LinearGradient>
           </TouchableOpacity>
         </View>
+
+        {/* Dev Quick Access - Remove this section before production */}
+        {__DEV__ && (
+          <View style={styles.devSection}>
+            <Text style={styles.devTitle}>Dev Quick Access</Text>
+            <Text style={styles.devSubtitle}>Skip login to preview screens</Text>
+            <View style={styles.devRow}>
+              <TouchableOpacity
+                style={styles.devButton}
+                onPress={() => devNavigate("sales")}
+              >
+                <Text style={styles.devButtonText}>Sales Record</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.devButton}
+                onPress={() => devNavigate("freelancer")}
+              >
+                <Text style={styles.devButtonText}>Freelancer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Public referral link */}
         <View style={styles.footer}>
@@ -206,6 +245,43 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  devSection: {
+    marginTop: 24,
+    backgroundColor: "#fefce8",
+    borderWidth: 1,
+    borderColor: "#fde047",
+    borderRadius: 12,
+    padding: 16,
+  },
+  devTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#713f12",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  devSubtitle: {
+    fontSize: 12,
+    color: "#a16207",
+    marginBottom: 12,
+  },
+  devRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  devButton: {
+    flex: 1,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  devButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 13,
   },
   footer: {
     alignItems: "center",
