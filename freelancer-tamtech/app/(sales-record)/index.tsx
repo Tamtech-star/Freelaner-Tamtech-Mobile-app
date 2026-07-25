@@ -14,7 +14,7 @@ import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
-// ── Types ──
+// Types 
 type SaleRecordRow = {
   id: string
   conversion_code: string

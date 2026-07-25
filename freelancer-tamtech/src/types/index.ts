@@ -6,6 +6,7 @@ export interface AuthUser {
   id: string
   email: string
   name?: string
+  code?: string
 }
 
 export interface AuthState {
