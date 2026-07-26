@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,14 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore } from "../../src/store/authStore";
 import { COLORS, SHADOWS } from "../../src/constants/config";
+import {
+  getFreelancerDashboard,
+  getFreelancerDetails,
+  submitLead,
+  submitConversion,
+  autoSubmitCommission,
+  acknowledgePayment,
+} from "../../src/api/portal";
 
 //types
 type LeadCardItem = {
@@ -259,8 +267,9 @@ const ldS = StyleSheet.create({
 
 export default function FreelancerDashboard() {
   const { user, logout } = useAuthStore();
-  const [sessionCode, setSessionCode] = useState("");
-  const [codeInput, setCodeInput] = useState("");
+  // sessionCode = user.code from auth store (no manual input needed)
+  const sessionCode = user?.code || "";
+  const [codeInput, setCodeInput] = useState(user?.code || "");
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [dashLoading, setDashLoading] = useState(false);
   const [dashError, setDashError] = useState<string | null>(null);

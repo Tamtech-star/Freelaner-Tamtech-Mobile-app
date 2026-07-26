@@ -59,7 +59,7 @@ export type DetailData = {
   }>;
 };
 
-// ── API functions matching reference web endpoints ──
+// API functions matching reference web endpoints 
 
 export async function getFreelancerDashboard(
   freelancerCode: string
