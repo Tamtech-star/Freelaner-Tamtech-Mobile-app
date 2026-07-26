@@ -433,7 +433,14 @@ export default function FreelancerDashboard() {
     catch {}
   };
 
-  const handleReload = () => { const code=codeInput.trim().toUpperCase(); if(!code) return; setSessionCode(code); loadDashboard(code); };
+  // Auto-load dashboard when sessionCode is available (from auth store)
+  useEffect(() => {
+    if (sessionCode && !dashboard && !dashLoading) {
+      loadDashboard(sessionCode);
+    }
+  }, [sessionCode]);
+
+  const handleReload = () => { const code=codeInput.trim().toUpperCase(); if(!code) return; loadDashboard(code); };
 
   const metrics = dashboard?.metrics;
   const freelancer = dashboard?.freelancer;
