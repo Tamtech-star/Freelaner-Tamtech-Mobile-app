@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ export default function ReferralScreen() {
   const [referralCode, setReferralCode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerIdNumber, setCustomerIdNumber] = useState("");
   const [bikeModel, setBikeModel] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +47,7 @@ export default function ReferralScreen() {
         referrer_phone: referrerPhone.trim(),
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
+        customer_id_number: customerIdNumber.trim() || undefined,
         bike_model: bikeModel.trim() || undefined,
         referral_code: referralCode.trim() || undefined,
       });
@@ -62,7 +64,7 @@ export default function ReferralScreen() {
       <View style={styles.container}>
         <View style={styles.successWrap}>
           <View style={styles.successIcon}>
-            <Text style={styles.successIconText}>✓</Text>
+            <Text style={styles.successIconText}>âœ“</Text>
           </View>
           <Text style={styles.successTitle}>Referral Submitted!</Text>
           <Text style={styles.successSubtitle}>
@@ -83,7 +85,7 @@ export default function ReferralScreen() {
             <Text style={styles.submitBtnText}>Submit Another Referral</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
-            <Text style={styles.backLinkText}>← Back to Login</Text>
+            <Text style={styles.backLinkText}>â† Back to Login</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -101,7 +103,7 @@ export default function ReferralScreen() {
       >
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>â† Back</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Submit a Referral</Text>
@@ -350,3 +352,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
