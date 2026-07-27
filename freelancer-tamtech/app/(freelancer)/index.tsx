@@ -25,6 +25,7 @@ import {
   autoSubmitCommission,
   acknowledgePayment,
   downloadCommissionInvoice,
+  downloadReceipt,
 } from "../../src/api/portal";
 
 //types
@@ -414,7 +415,7 @@ export default function FreelancerDashboard() {
 
   const handleDownloadReceipt = async () => {
     if (!paymentSubCode) return;
-    try { await fetch("https://api.spirospares.com/api/portal/commissions/receipt", { method:"POST",headers:{"Content-Type":"application/json"}, body:JSON.stringify({ paymentCode:paymentSubCode }) }); }
+    try { await downloadReceipt(paymentSubCode); }
     catch {}
   };
 
