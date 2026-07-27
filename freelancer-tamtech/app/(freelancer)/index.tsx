@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+﻿import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   submitConversion,
   autoSubmitCommission,
   acknowledgePayment,
+  downloadCommissionInvoice,
 } from "../../src/api/portal";
 
 //types
@@ -307,12 +308,7 @@ export default function FreelancerDashboard() {
   const loadDashboard = useCallback(async (code: string, silent = false) => {
     if (!silent) { setDashLoading(true); setDashError(null); setDashboard(null); }
     try {
-      const res = await fetch("https://api.spirospares.com/api/portal/dashboard/freelancer", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ freelancerCode: code }),
-      });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || "Failed");
+      const payload = await getFreelancerDashboard(code);
       setDashboard(payload);
       if (!silent) setActiveTab("cards");
     } catch {
@@ -323,12 +319,7 @@ export default function FreelancerDashboard() {
   const loadDetailData = useCallback(async (code: string, filter: string | null = null) => {
     setDetailLoading(true);
     try {
-      const res = await fetch("https://api.spirospares.com/api/portal/dashboard/freelancer/details", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ freelancerCode: code, filter }),
-      });
-      const payload = await res.json();
-      if (!res.ok) throw new Error();
+      const payload = await getFreelancerDetails(code, filter);
       setDetailData(payload);
       setLeadView("VIEW_LEAD_LIST");
     } catch { setDetailData({ leads: [] }); setLeadView("VIEW_LEAD_LIST"); }
@@ -361,9 +352,7 @@ export default function FreelancerDashboard() {
         residenceLocation:leadForm.residenceLocation,county:leadForm.county,leadNotes:leadForm.leadNotes,
         duplicateOverrideReason:leadForm.duplicateOverrideReason,freelancerCode:sessionCode,
       };
-      const res = await fetch("https://api.spirospares.com/api/portal/leads", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Failed");
+      const result = await submitLead(payload);
       setWfMessage(`Lead created for ${leadForm.customerFullName}!`);
       setLeadForm({ customerFullName:"",customerIdNumber:"",customerPhone:"",bikeModel:"",paymentType:"",quantityInterested:"1",residenceLocation:"",county:"",leadNotes:"",duplicateOverrideReason:"" });
       loadDashboard(sessionCode, true);
@@ -388,9 +377,7 @@ export default function FreelancerDashboard() {
       const invRes = await fetch(invoicePhoto.uri); const invBlob = await invRes.blob();
       fd.append("invoicePhoto",invBlob,invoicePhoto.name);
       if (salesAgreementPhoto) { const saRes = await fetch(salesAgreementPhoto.uri); const saBlob = await saRes.blob(); fd.append("salesAgreementPhoto",saBlob,salesAgreementPhoto.name); }
-      const res = await fetch("https://api.spirospares.com/api/portal/conversions", { method:"POST", body:fd });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error||"Failed");
+      const result = await submitConversion(fd);
       setConvSuccess(true);
       setConvForm({ bikeModel:"",quantity:"1",saleDate:todayStr(),invoiceNumber:"" });
       setInvoicePhoto(null); setSalesAgreementPhoto(null);
@@ -404,8 +391,8 @@ export default function FreelancerDashboard() {
     if (!leadId) { Alert.alert("Error","No lead selected."); return; }
     setClaimDownloading(true);
     try {
-      await fetch("https://api.spirospares.com/api/portal/commissions/auto-submit", { method:"POST",headers:{"Content-Type":"application/json"}, body:JSON.stringify({ leadId }) });
-      try { await fetch("https://api.spirospares.com/api/portal/commissions/invoice", { method:"POST",headers:{"Content-Type":"application/json"}, body:JSON.stringify({ leadId }) }); }
+      await autoSubmitCommission(leadId);
+      try { await downloadCommissionInvoice(leadId); }
       catch { /* PDF may not download on mobile */ }
       setClaimSubmitted(true);
       loadDashboard(sessionCode,true);
@@ -418,9 +405,7 @@ export default function FreelancerDashboard() {
     setWfSubmitting(true); setWfError(null);
     const code = paymentCode.trim().toUpperCase();
     try {
-      const res = await fetch("https://api.spirospares.com/api/portal/commissions/acknowledge", { method:"POST",headers:{"Content-Type":"application/json"}, body:JSON.stringify({ paymentCode:code,receiptUrl:paymentReceiptUrl,notes:paymentNotes }) });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error||"Failed");
+      const result = await acknowledgePayment({ paymentCode:code,receiptUrl:paymentReceiptUrl,notes:paymentNotes });
       setPaymentDone(true); setPaymentSubCode(code);
       loadDashboard(sessionCode,true);
     } catch (err:any) { setWfError(err.message); }
@@ -480,7 +465,7 @@ export default function FreelancerDashboard() {
 
         {dashError && <View style={s.errorBanner}><Text style={s.errorText}>{dashError}</Text></View>}
 
-        {/* ══ TAB: CARDS ══ */}
+        {/*  TAB: CARDS  */}
         {activeTab === "cards" && (
           <>
             {dashLoading && !dashboard && <View style={s.loadingBox}><ActivityIndicator color={COLORS.gradientStart} /><Text style={s.loadingText}>Loading dashboard...</Text></View>}
@@ -545,7 +530,7 @@ export default function FreelancerDashboard() {
           </>
         )}
 
-        {/* ══ TAB: WORKFLOW ══ */}
+        {/*  TAB: WORKFLOW  */}
         {activeTab === "workflow" && (
           <View style={s.workflowSection}>
             {/* Stepper */}
@@ -609,7 +594,7 @@ export default function FreelancerDashboard() {
                   </View>
                 ) : (
                   <>
-                    <Text style={s.stageTitle}>💰 Step 2: Sale Conversion</Text>
+                    <Text style={s.stageTitle}> Step 2: Sale Conversion</Text>
                     <Text style={s.stageDesc}>{conversionLead?`Confirm the sale for ${conversionLead.customer_full_name} (Lead: ${conversionLead.lead_code})`:"Confirm a sale by entering transaction verification details."}</Text>
                     {conversionLead && (
                       <View style={s.contextBox}>
@@ -653,7 +638,7 @@ export default function FreelancerDashboard() {
             {/* STAGE 3: COMMISSION CLAIM */}
             {workflowStage===3 && (
               <View style={s.stageCard}>
-                <Text style={s.stageTitle}>📄 Step 3: Commission Claim</Text>
+                <Text style={s.stageTitle}> Step 3: Commission Claim</Text>
                 <Text style={s.stageDesc}>Generate and download your commission invoice, then submit your claim.</Text>
                 <View style={s.invoiceBox}>
                   <Text style={s.invoiceBoxTitle}>Your Commission Invoice</Text>
