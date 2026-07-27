@@ -47,7 +47,7 @@ export default function LoginScreen() {
     useAuthStore.setState({
       token: "dev-token",
       role: screen === "sales" ? "sales_agent" : "freelancer",
-      user: { id: "dev", email: "dev@test.com", name: screen === "sales" ? "Sales Agent" : "Musa Simon" },
+      user: { id: "dev", email: "dev@test.com", name: screen === "sales" ? "Sales Agent" : "Musa Simon", code: screen === "freelancer" ? "MUSA.SIMON4289" : undefined },
       isAuthenticated: true,
       isLoading: false,
     })
