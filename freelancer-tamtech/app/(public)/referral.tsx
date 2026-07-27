@@ -12,6 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
+import { Picker } from "@react-native-picker/picker";
 import { submitReferral } from "../../src/api/referrals";
 import { COLORS, SHADOWS } from "../../src/constants/config";
 
@@ -177,13 +178,17 @@ export default function ReferralScreen() {
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Bike Model Interested In (optional)</Text>
-            <TextInput
-              style={styles.input}
-              value={bikeModel}
-              onChangeText={setBikeModel}
-              placeholder="e.g. EKON450M1V2"
-              placeholderTextColor={COLORS.placeholder}
-            />
+            <View style={styles.pickerWrap}>
+              <Picker
+                selectedValue={bikeModel}
+                onValueChange={(v) => setBikeModel(v)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select a bike model" value="" />
+                <Picker.Item label="EKON450M1V2" value="EKON450M1V2" />
+                <Picker.Item label="EKON450M2V2" value="EKON450M2V2" />
+              </Picker>
+            </View>
           </View>
         </View>
 
@@ -267,6 +272,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.heading,
     backgroundColor: COLORS.inputBg,
+  },
+  pickerWrap: {
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: COLORS.inputBg,
+  },
+  picker: {
+    height: 48,
   },
   errorBanner: {
     backgroundColor: "#fee2e2",
