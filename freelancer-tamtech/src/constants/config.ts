@@ -9,7 +9,8 @@ const DEV_API_URL = Platform.select({
   default: "http://localhost:3000/api",
 })
 
-export const API_BASE_URL = __DEV__ ? DEV_API_URL : PRODUCTION_API_URL
+// Always use production API ,backend is cloud-hosted, no local dev server
+export const API_BASE_URL = PRODUCTION_API_URL
 
 export const APP_NAME = "Freelancer-Tamtech"
 export const APP_VERSION = "1.0.0"
@@ -22,7 +23,7 @@ export const STORAGE_KEYS = {
   DRAFT_FORM: "draft_sales_form",
 }
 
-//  Design tokens matching spirospares.com web UI =====
+//  Design tokens matching spirospares.com web UI 
 
 export const COLORS = {
   // Backgrounds
