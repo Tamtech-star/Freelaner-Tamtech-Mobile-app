@@ -14,6 +14,7 @@ import { router } from "expo-router"
 import * as ImagePicker from "expo-image-picker"
 import { Picker } from "@react-native-picker/picker"
 import { useAuthStore } from "../../src/store/authStore"
+import { submitSalesRecord } from "../../src/api/salesRecord"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 //  Constants 

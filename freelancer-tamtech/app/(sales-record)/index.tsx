@@ -9,6 +9,7 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  Linking,
   StyleSheet,
 } from "react-native"
 import { router } from "expo-router"
@@ -25,6 +26,15 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
   submitted: { bg: "#dbeafe", text: "#1e40af" },
   converted: { bg: "#dbeafe", text: "#1e40af" },
   pending: { bg: "#fef3c7", text: "#92400e" },
+}
+
+const DOCUMENT_LABELS: Record<string, string> = {
+  invoice_photo_url: "Invoice Photo",
+  agreement_photo_url: "Sales Agreement",
+  id_doc_url: "ID Document",
+  kra_doc_url: "KRA Document",
+  bike_photo_url: "Bike Photo",
+  chassis_photo_url: "Chassis Photo",
 }
 
 export default function SalesRecordHome() {
@@ -330,6 +340,37 @@ export default function SalesRecordHome() {
                   </View>
                 </View>
 
+                {/* Documents */}
+                {(() => {
+                  const docs = [
+                    { key: "invoice_photo_url", url: selectedRow.invoice_photo_url },
+                    { key: "agreement_photo_url", url: selectedRow.agreement_photo_url },
+                    { key: "id_doc_url", url: selectedRow.id_doc_url },
+                    { key: "kra_doc_url", url: selectedRow.kra_doc_url },
+                    { key: "bike_photo_url", url: selectedRow.bike_photo_url },
+                    { key: "chassis_photo_url", url: selectedRow.chassis_photo_url },
+                  ].filter(d => d.url)
+                  if (docs.length === 0) return null
+                  return (
+                    <View style={s.documentsSection}>
+                      <Text style={s.documentsTitle}>Documents ({docs.length})</Text>
+                      {docs.map(doc => (
+                        <TouchableOpacity
+                          key={doc.key}
+                          style={s.docLink}
+                          onPress={() => Linking.openURL(doc.url!)}
+                        >
+                          <Text style={s.docLinkIcon}>📎</Text>
+                          <Text style={s.docLinkText} numberOfLines={1}>
+                            {DOCUMENT_LABELS[doc.key] || doc.key}
+                          </Text>
+                          <Text style={s.docLinkArrow}>↗</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )
+                })()}
+
                 <TouchableOpacity
                   onPress={() => setSelectedRow(null)}
                   style={s.closeBtn}
@@ -531,4 +572,39 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   closeBtnText: { fontSize: 14, fontWeight: "700", color: "#334155" },
+
+  // Documents section
+  documentsSection: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  documentsTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#334155",
+    marginBottom: 10,
+  },
+  docLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#d1fae5",
+  },
+  docLinkIcon: { fontSize: 16, marginRight: 8 },
+  docLinkText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#1d4ed8",
+    fontWeight: "600",
+  },
+  docLinkArrow: { fontSize: 14, color: "#94a3b8" },
 })
