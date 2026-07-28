@@ -31,7 +31,10 @@ export default function LoginScreen() {
 
     if (result.success) {
       const { role } = useAuthStore.getState()
-      if (role === "sales_agent") {
+      if (role === "admin") {
+        // Admin mobile access — to be implemented later
+        Alert.alert("Admin", "Admin mobile access is coming soon.")
+      } else if (role === "sales_agent") {
         router.replace("/(sales-record)")
       } else if (role === "freelancer") {
         router.replace("/(freelancer)")
@@ -46,13 +49,15 @@ export default function LoginScreen() {
     // Set a fake auth state so layouts don't redirect away
     useAuthStore.setState({
       token: "dev-token",
-      role: screen === "sales" ? "sales_agent" : "freelancer",
-      user: { id: "dev", email: "dev@test.com", name: screen === "sales" ? "Sales Agent" : "Musa Simon", code: screen === "freelancer" ? "MUSA.SIMON4289" : undefined },
+      role: screen === "sales" ? "sales_agent" : screen === "admin" ? "admin" : "freelancer",
+      user: { id: "dev", email: "dev@test.com", name: screen === "sales" ? "Sales Agent" : screen === "admin" ? "Admin" : "Musa Simon", code: screen === "freelancer" ? "MUSA.SIMON4289" : undefined },
       isAuthenticated: true,
       isLoading: false,
     })
     if (screen === "sales") {
       router.replace("/(sales-record)")
+    } else if (screen === "admin") {
+      Alert.alert("Admin", "Admin mobile access is coming soon.")
     } else if (screen === "freelancer") {
       router.replace("/(freelancer)")
     }
@@ -69,7 +74,7 @@ export default function LoginScreen() {
           <Text style={styles.brandTag}>TAMTECH TOOLS</Text>
           <Text style={styles.brandTitle}>Freelancer Portal</Text>
           <Text style={styles.brandSubtitle}>
-            Sign in as a sales agent or freelancer
+            Sign in as admin, sales agent or freelancer
           </Text>
         </View>
 
@@ -133,6 +138,12 @@ export default function LoginScreen() {
             <Text style={styles.devTitle}>Dev Quick Access</Text>
             <Text style={styles.devSubtitle}>Skip login to preview screens</Text>
             <View style={styles.devRow}>
+              <TouchableOpacity
+                style={styles.devButton}
+                onPress={() => devNavigate("admin")}
+              >
+                <Text style={styles.devButtonText}>Admin</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.devButton}
                 onPress={() => devNavigate("sales")}

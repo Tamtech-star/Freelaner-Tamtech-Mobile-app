@@ -1,6 +1,6 @@
-// ===== Auth Types =====
+// Auth Types 
 
-export type UserRole = 'sales_agent' | 'freelancer' | 'guest'
+export type UserRole = 'admin' | 'sales_agent' | 'freelancer' | 'guest'
 
 export interface AuthUser {
   id: string
@@ -17,7 +17,7 @@ export interface AuthState {
   isAuthenticated: boolean
 }
 
-// ===== Customer Types =====
+//  Customer Types 
 
 export type CustomerType = 'individual' | 'company'
 export type SubmissionType = 'direct_sale' | 'freelancer_lead'
@@ -56,7 +56,7 @@ export interface SalesFormData {
   linked_lead_id?: string
 }
 
-// ===== Sales History Types =====
+// Sales History Types 
 
 export interface SaleConversion {
   id: string
@@ -72,7 +72,7 @@ export interface SaleConversion {
   chassis_number?: string
 }
 
-// ===== Freelancer Types =====
+//  Freelancer Types 
 
 export interface LeadSubmission {
   id: string
@@ -92,7 +92,7 @@ export interface FreelancerDashboard {
   recent_leads: LeadSubmission[]
 }
 
-// ===== Referral Types =====
+//  Referral Types 
 
 export interface ReferralFormData {
   referrer_name: string
@@ -103,7 +103,7 @@ export interface ReferralFormData {
   bike_model?: string
 }
 
-// ===== API Response Types =====
+// API Response Types 
 
 export interface ApiResponse<T = unknown> {
   ok: boolean
@@ -125,7 +125,7 @@ export interface FreelancerDashboardResponse {
   dashboard: FreelancerDashboard
 }
 
-// ===== Form Validation =====
+//  Form Validation 
 
 export interface ValidationError {
   field: string

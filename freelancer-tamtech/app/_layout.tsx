@@ -28,6 +28,9 @@ export default function RootLayout() {
           <Stack.Screen name="(sales-record)" />
         ) : isAuthenticated && role === "freelancer" ? (
           <Stack.Screen name="(freelancer)" />
+        ) : isAuthenticated && role === "admin" ? (
+          // Admin mobile access — to be implemented later
+          <Stack.Screen name="(freelancer)" />
         ) : (
           <Stack.Screen name="login" />
         )}

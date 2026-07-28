@@ -1,3 +1,5 @@
+
+
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 
 let isOnline = true;
