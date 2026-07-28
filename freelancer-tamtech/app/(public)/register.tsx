@@ -111,7 +111,7 @@ export default function RegisterScreen() {
         </View>
 
         <View style={s.card}>
-          <Text style={s.cardTitle}>Join Spiro Spares</Text>
+          <Text style={s.cardTitle}>Join Tamtech-Freelancer team</Text>
           <Text style={s.cardSubtitle}>
             Complete your details to join our freelancer marketing network.
             All starred fields are required.

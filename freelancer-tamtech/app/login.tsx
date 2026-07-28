@@ -166,7 +166,7 @@ export default function LoginScreen() {
           <Link href="/(public)/register" style={styles.footerLink}>
             Sign Up to Become a Freelancer
           </Link>
-          <Text style={[styles.footerText, { marginTop: 16 }]}>Not an agent or freelancer?</Text>
+          <Text style={[styles.footerText, { marginTop: 16 }]}>Not a freelancer?</Text>
           <Link href="/(public)/referral" style={styles.footerLink}>
             Submit a Referral Without Login
           </Link>
