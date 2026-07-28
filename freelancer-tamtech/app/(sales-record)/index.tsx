@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import {
   View,
   Text,
@@ -8,61 +8,20 @@ import {
   Modal,
   FlatList,
   RefreshControl,
+  ActivityIndicator,
   StyleSheet,
 } from "react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
+import { fetchSalesHistory, type SalesRecordItem } from "../../src/api/salesRecord"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
-// Types 
-type SaleRecordRow = {
-  id: string
-  conversion_code: string
-  submission_type: "direct_sale" | "freelancer_lead"
-  customer_name: string
-  freight: string
-  sales_agent_name: string
-  sales_invoice_number: string
-  bike_model_sold: string
-  sale_date: string
-  quantity: number
-  commission_kes: string
-  payment_status: string
-}
-
-const MOCK_ROWS: SaleRecordRow[] = [
-  {
-    id: "1",
-    conversion_code: "CONV-001",
-    submission_type: "direct_sale",
-    customer_name: "Musa Simon",
-    freight: "—",
-    sales_agent_name: "Mary",
-    sales_invoice_number: "INV-600",
-    bike_model_sold: "EKON450M1V2",
-    sale_date: "2025-01-15",
-    quantity: 1,
-    commission_kes: "—",
-    payment_status: "paid",
-  },
-  {
-    id: "2",
-    conversion_code: "CONV-002",
-    submission_type: "freelancer_lead",
-    customer_name: "Jane Wanjiku",
-    freight: "Musa Simon ",
-    sales_agent_name: "Japheth",
-    sales_invoice_number: "INV-601",
-    bike_model_sold: "VEO",
-    sale_date: "2025-02-20",
-    quantity: 2,
-    commission_kes: "KES 4,000",
-    payment_status: "submitted",
-  },
-]
+// Types
+type SaleRecordRow = SalesRecordItem
 
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
   paid: { bg: "#d1fae5", text: "#065f46" },
+  approved: { bg: "#d1fae5", text: "#065f46" },
   submitted: { bg: "#dbeafe", text: "#1e40af" },
   converted: { bg: "#dbeafe", text: "#1e40af" },
   pending: { bg: "#fef3c7", text: "#92400e" },
@@ -70,16 +29,44 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
 
 export default function SalesRecordHome() {
   const { user, logout } = useAuthStore()
-  const [rows] = useState<SaleRecordRow[]>(MOCK_ROWS)
+  const [rows, setRows] = useState<SaleRecordRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [selectedRow, setSelectedRow] = useState<SaleRecordRow | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
+  const loadHistory = useCallback(async () => {
+    try {
+      setLoadError(null)
+      const items = await fetchSalesHistory()
+      setRows(items)
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || "Failed to load sales history."
+      setLoadError(msg)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [])
+
+  // Load on mount
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    setTimeout(() => setRefreshing(false), 1000)
-  }, [])
+    await loadHistory()
+  }, [loadHistory])
+
+  // Reload when history modal opens
+  useEffect(() => {
+    if (historyOpen) {
+      loadHistory()
+    }
+  }, [historyOpen])
 
   const handleLogout = async () => {
     await logout()
@@ -177,6 +164,53 @@ export default function SalesRecordHome() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Quick summary of recent records */}
+        {!loading && rows.length > 0 && (
+          <View style={s.recentSection}>
+            <Text style={s.recentTitle}>Recent Sales ({rows.length} total)</Text>
+            {rows.slice(0, 3).map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => setSelectedRow(item)}
+                style={[s.historyCard, SHADOWS.cardSm, { marginBottom: 8 }]}
+              >
+                <View style={s.histRow1}>
+                  <Text style={s.conversionCode}>{item.conversion_code}</Text>
+                  <View style={[s.typeBadge, { backgroundColor: statusBg(item.payment_status) }]}>
+                    <Text style={[s.typeBadgeText, { color: statusText(item.payment_status) }]}>
+                      {item.submission_type === "direct_sale" ? "Direct Sale" : "Freelancer Lead"}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={s.customerName}>{item.customer_name}</Text>
+                <View style={s.histRow2}>
+                  <Text style={s.invoiceNum}>#{item.sales_invoice_number}</Text>
+                  <Text style={s.bikeModel}>{item.bike_model_sold}</Text>
+                  <Text style={s.qtyText}>Qty: {item.quantity}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Loading state */}
+        {loading && (
+          <View style={s.loadingWrap}>
+            <ActivityIndicator size="large" color={COLORS.gradientStart} />
+            <Text style={s.loadingText}>Loading sales records...</Text>
+          </View>
+        )}
+
+        {/* Error state */}
+        {loadError && (
+          <View style={s.errorWrap}>
+            <Text style={s.errorText}>{loadError}</Text>
+            <TouchableOpacity onPress={loadHistory} style={s.retryBtn}>
+              <Text style={s.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {/*  History Modal  */}
@@ -383,6 +417,23 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   entryBtnText: { fontSize: 12, fontWeight: "700", color: "#1d4ed8" },
+
+  // Recent section
+  recentSection: { marginTop: 24 },
+  recentTitle: { fontSize: 14, fontWeight: "700", color: "#334155", marginBottom: 10 },
+
+  // Loading / Error states
+  loadingWrap: { marginTop: 32, alignItems: "center" },
+  loadingText: { marginTop: 8, fontSize: 14, color: "#64748b" },
+  errorWrap: { marginTop: 24, alignItems: "center", paddingHorizontal: 16 },
+  errorText: { fontSize: 14, color: "#dc2626", textAlign: "center", marginBottom: 12 },
+  retryBtn: {
+    backgroundColor: COLORS.gradientStart,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
 
   // History Modal
   modalScreen: { flex: 1, backgroundColor: "#f8fafc" },
