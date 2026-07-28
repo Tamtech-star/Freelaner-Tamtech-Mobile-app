@@ -9,6 +9,7 @@ export default function PublicLayout() {
       }}
     >
       <Stack.Screen name="referral" />
+      <Stack.Screen name="register" />
     </Stack>
   )
 }
