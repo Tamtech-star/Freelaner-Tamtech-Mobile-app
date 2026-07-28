@@ -160,9 +160,13 @@ export default function LoginScreen() {
           </View>
         )}
 
-        {/* Public referral link */}
+        {/* Public links */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Not an agent or freelancer?</Text>
+          <Text style={styles.footerText}>Don't have an account?</Text>
+          <Link href="/(public)/register" style={styles.footerLink}>
+            Sign Up to Become a Freelancer
+          </Link>
+          <Text style={[styles.footerText, { marginTop: 16 }]}>Not an agent or freelancer?</Text>
           <Link href="/(public)/referral" style={styles.footerLink}>
             Submit a Referral Without Login
           </Link>
@@ -255,7 +259,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "700",
+   fontWeight: "700",
   },
   devSection: {
     marginTop: 24,
