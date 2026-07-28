@@ -45,8 +45,7 @@ export async function getStoredAuth(): Promise<{
   }
 }
 
-// ── Freelancer Registration ───────────────────────────────────
-
+//  Freelancer Registration 
 export interface FreelancerRegistrationPayload {
   fullName: string
   age: number
