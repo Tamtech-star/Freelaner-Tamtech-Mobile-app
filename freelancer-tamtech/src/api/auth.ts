@@ -44,3 +44,44 @@ export async function getStoredAuth(): Promise<{
     user: userData ? JSON.parse(userData) : { id: '', email: '' },
   }
 }
+
+// ── Freelancer Registration ───────────────────────────────────
+
+export interface FreelancerRegistrationPayload {
+  fullName: string
+  age: number
+  sex: 'male' | 'female' | 'other' | 'prefer_not_to_say'
+  occupation: string
+  email: string
+  mpesaPhone: string
+  alternatePhone?: string
+  kraPin: string
+  nationalId: string
+  location: string
+  county: string
+  address: string
+}
+
+export interface RegistrationResponse {
+  ok: boolean
+  freelancerId?: string
+  freelancerCode?: string
+  registrationStatus: string
+  accountState: string
+  message?: string
+}
+
+export async function registerFreelancer(
+  payload: FreelancerRegistrationPayload
+): Promise<RegistrationResponse> {
+  const response = await api.post<RegistrationResponse & { error?: string }>(
+    '/portal/freelancers/register',
+    payload
+  )
+
+  if (response.data.error) {
+    throw new Error(response.data.error)
+  }
+
+  return response.data
+}
