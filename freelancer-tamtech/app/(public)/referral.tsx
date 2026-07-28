@@ -34,8 +34,8 @@ export default function ReferralScreen() {
       Alert.alert("Missing Fields", "Your name and phone number are required.");
       return;
     }
-    if (!customerName.trim() || !customerPhone.trim()) {
-      Alert.alert("Missing Fields", "Customer name and phone number are required.");
+    if (!customerName.trim() || !customerPhone.trim() || !customerIdNumber.trim()) {
+      Alert.alert("Missing Fields", "Customer name, phone, and ID number are required.");
       return;
     }
 
@@ -103,12 +103,12 @@ export default function ReferralScreen() {
       >
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>â† Back</Text>
+          <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Submit a Referral</Text>
         <Text style={styles.subtitle}>
-          Refer a customer and earn commission when they purchase
+          Refer a customer and earn commission when they make a purchase
         </Text>
 
         {error && (
@@ -142,7 +142,7 @@ export default function ReferralScreen() {
             />
           </View>
           <View style={styles.field}>
-            <Text style={styles.label}>Referral Code (optional)</Text>
+            <Text style={styles.label}>Referral Code </Text>
             <TextInput
               style={styles.input}
               value={referralCode}
@@ -179,7 +179,17 @@ export default function ReferralScreen() {
             />
           </View>
           <View style={styles.field}>
-            <Text style={styles.label}>Bike Model Interested In (optional)</Text>
+            <Text style={styles.label}>Customer ID Number * </Text>
+            <TextInput
+              style={styles.input}
+              value={customerIdNumber}
+              onChangeText={setCustomerIdNumber}
+              placeholder="Customer's national ID"
+              placeholderTextColor={COLORS.placeholder}
+            />
+          </View>
+          <View style={styles.field}>
+            <Text style={styles.label}>Bike Model Interested In </Text>
             <View style={styles.pickerWrap}>
               <Picker
                 selectedValue={bikeModel}
