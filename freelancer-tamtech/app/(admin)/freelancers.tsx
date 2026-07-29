@@ -7,11 +7,17 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Modal,
   StyleSheet,
+  Linking,
 } from "react-native"
 import { router } from "expo-router"
-import { getFreelancers, type FreelancerRow } from "../../src/api/admin"
+import { getFreelancers, deleteFreelancer, type FreelancerRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
+
+const BRAND_BLUE = "#2881FA"
+const CSV_URL = "https://spirospares.com/api/portal/admin/freelancers/csv"
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   approved: { bg: "#d1fae5", text: "#065f46" },
@@ -26,6 +32,8 @@ export default function FreelancersScreen() {
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState("")
+  const [selectedFreelancer, setSelectedFreelancer] = useState<FreelancerRow | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -47,6 +55,40 @@ export default function FreelancersScreen() {
     await load()
   }, [load])
 
+  const handleDelete = (freelancer: FreelancerRow) => {
+    Alert.alert(
+      "Delete Freelancer",
+      `Are you sure you want to delete ${freelancer.full_name}? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDeletingId(freelancer.id)
+            try {
+              await deleteFreelancer(freelancer.id)
+              setFreelancers((prev) => prev.filter((f) => f.id !== freelancer.id))
+              Alert.alert("Deleted", `${freelancer.full_name} has been removed.`)
+            } catch (err: any) {
+              Alert.alert("Error", err?.response?.data?.error || err?.message || "Failed to delete.")
+            } finally {
+              setDeletingId(null)
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const handleCsvDownload = async () => {
+    try {
+      await Linking.openURL(CSV_URL)
+    } catch {
+      Alert.alert("Error", "Could not open download link.")
+    }
+  }
+
   const filtered = useMemo(() => {
     if (!search.trim()) return freelancers
     const q = search.toLowerCase()
@@ -60,11 +102,6 @@ export default function FreelancersScreen() {
   }, [freelancers, search])
 
   const active = freelancers.filter((f) => f.registration_status === "approved").length
-
-  const statusBadge = (status: string) => {
-    const s = STATUS_BADGE[status] || { bg: "#f1f5f9", text: "#475569" }
-    return { s }
-  }
 
   const formatDate = (d: string) => {
     try {
@@ -94,9 +131,14 @@ export default function FreelancersScreen() {
               {freelancers.length} total | {active} active
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Text style={s.backText}>Back</Text>
-          </TouchableOpacity>
+          <View style={s.headerActions}>
+            <TouchableOpacity onPress={handleCsvDownload} style={s.csvBtn}>
+              <Text style={s.csvBtnText}>⬇ CSV</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Text style={s.backText}>Back</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search */}
@@ -132,29 +174,93 @@ export default function FreelancersScreen() {
         )}
 
         {filtered.map((f) => {
-          const badge = statusBadge(f.registration_status)
+          const badge = STATUS_BADGE[f.registration_status] || { bg: "#f1f5f9", text: "#475569" }
+          const isDeleting = deletingId === f.id
           return (
             <View key={f.id} style={[s.card, SHADOWS.cardSm]}>
-              <View style={s.cardRow1}>
-                <Text style={s.nameText}>{f.full_name}</Text>
-                <View style={[s.statusBadge, { backgroundColor: badge.s.bg }]}>
-                  <Text style={[s.statusText, { color: badge.s.text }]}>
-                    {f.registration_status}
-                  </Text>
+              <TouchableOpacity
+                onPress={() => setSelectedFreelancer(f)}
+                activeOpacity={0.7}
+              >
+                <View style={s.cardRow1}>
+                  <Text style={s.nameText}>{f.full_name}</Text>
+                  <View style={[s.statusBadge, { backgroundColor: badge.bg }]}>
+                    <Text style={[s.statusText, { color: badge.text }]}>
+                      {f.registration_status}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <Text style={s.subText}>Email: {f.email}</Text>
-              <Text style={s.subText}>Phone: {f.mpesa_phone || "N/A"}</Text>
-              <View style={s.cardRow1}>
-                <Text style={s.codeText}>
-                  {f.display_code || f.freelancer_code}
+                <Text style={s.subText}>📧 {f.email}</Text>
+                <Text style={s.subText}>📞 {f.mpesa_phone || "N/A"}</Text>
+                <View style={s.cardRow1}>
+                  <Text style={s.codeText}>
+                    {f.display_code || f.freelancer_code}
+                  </Text>
+                  <Text style={s.dateText}>{formatDate(f.created_at)}</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.deleteBtn, isDeleting && { opacity: 0.5 }]}
+                onPress={() => handleDelete(f)}
+                disabled={isDeleting}
+              >
+                <Text style={s.deleteBtnText}>
+                  {isDeleting ? "Deleting..." : " Delete"}
                 </Text>
-                <Text style={s.dateText}>{formatDate(f.created_at)}</Text>
-              </View>
+              </TouchableOpacity>
             </View>
           )
         })}
       </ScrollView>
+
+      {/* Detail Modal */}
+      <Modal visible={!!selectedFreelancer} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <ScrollView style={s.modalCard}>
+            <Text style={s.modalTitle}>Freelancer Details</Text>
+            {selectedFreelancer && (
+              <>
+                <Text style={s.modalSub}>
+                  {selectedFreelancer.display_code || selectedFreelancer.freelancer_code}
+                </Text>
+                <View style={s.detailSection}>
+                  <Text style={s.detailLabel}>Full Name</Text>
+                  <Text style={s.detailValue}>{selectedFreelancer.full_name}</Text>
+
+                  <Text style={s.detailLabel}>Email</Text>
+                  <Text style={s.detailValue}>{selectedFreelancer.email}</Text>
+
+                  <Text style={s.detailLabel}>Phone</Text>
+                  <Text style={s.detailValue}>{selectedFreelancer.mpesa_phone || "N/A"}</Text>
+
+                  <Text style={s.detailLabel}>Registration Status</Text>
+                  <View style={[s.statusBadge, { alignSelf: "flex-start", marginTop: 4, backgroundColor: (STATUS_BADGE[selectedFreelancer.registration_status] || { bg: "#f1f5f9" }).bg }]}>
+                    <Text style={[s.statusText, { color: (STATUS_BADGE[selectedFreelancer.registration_status] || { text: "#475569" }).text }]}>
+                      {selectedFreelancer.registration_status}
+                    </Text>
+                  </View>
+
+                  <Text style={s.detailLabel}>Freelancer Code</Text>
+                  <Text style={s.detailValue}>{selectedFreelancer.freelancer_code}</Text>
+
+                  <Text style={s.detailLabel}>Display Code</Text>
+                  <Text style={s.detailValue}>{selectedFreelancer.display_code || "N/A"}</Text>
+
+                  <Text style={s.detailLabel}>Created</Text>
+                  <Text style={s.detailValue}>{formatDate(selectedFreelancer.created_at)}</Text>
+                </View>
+              </>
+            )}
+
+            <TouchableOpacity
+              style={s.closeBtn}
+              onPress={() => setSelectedFreelancer(null)}
+            >
+              <Text style={s.closeBtnText}>Close</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -184,7 +290,15 @@ const s = StyleSheet.create({
   headerLeft: { flex: 1 },
   headerTitle: { fontSize: 22, fontWeight: "700", color: "#0f172a" },
   headerSub: { marginTop: 4, fontSize: 13, color: "#64748b" },
-  backBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0" },
+  headerActions: { flexDirection: "row", gap: 8 },
+  csvBtn: {
+    backgroundColor: "#10b981",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  csvBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  backBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0" },
   backText: { fontSize: 13, fontWeight: "500", color: "#64748b" },
 
   searchWrap: { marginBottom: 14 },
@@ -231,4 +345,47 @@ const s = StyleSheet.create({
   errorText: { fontSize: 14, color: "#dc2626", textAlign: "center", marginBottom: 12 },
   retryBtn: { backgroundColor: COLORS.gradientStart, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   retryBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+
+  deleteBtn: {
+    marginTop: 8,
+    backgroundColor: "#fef2f2",
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  deleteBtnText: { color: "#dc2626", fontSize: 12, fontWeight: "700" },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: "85%",
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", marginBottom: 4 },
+  modalSub: { fontSize: 12, color: "#64748b", marginBottom: 16, fontFamily: "monospace" },
+  detailSection: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  detailLabel: { fontSize: 10, color: "#94a3b8", textTransform: "uppercase", marginTop: 8 },
+  detailValue: { fontSize: 14, fontWeight: "600", color: "#1e293b", marginTop: 2 },
+  closeBtn: {
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  closeBtnText: { color: "#334155", fontSize: 13, fontWeight: "600" },
 })

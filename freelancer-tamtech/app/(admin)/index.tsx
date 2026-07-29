@@ -190,7 +190,7 @@ export default function AdminDashboardScreen() {
                 label="Total Leads"
                 value={metrics.total_leads}
                 color="#3b82f6"
-                onPress={() => router.push("/(admin)/convertedsales")}
+                onPress={() => router.push("/(admin)/leads")}
               />
               <MetricCard
                 label="Converted Sales"

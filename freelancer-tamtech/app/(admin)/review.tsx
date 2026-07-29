@@ -28,6 +28,9 @@ import {
 } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
+const BRAND_BLUE = "#2881FA"
+const BRAND_TEAL = "#45E0D7"
+
 type Tab = "payments" | "duplicates" | "conversions"
 
 export default function ReviewQueueScreen() {
@@ -40,7 +43,7 @@ export default function ReviewQueueScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
 
-  // Payment modal state
+  // Payment modal
   const [activePayment, setActivePayment] = useState<PendingPaymentItem | null>(null)
   const [paymentForm, setPaymentForm] = useState({
     paymentMode: "M-Pesa",
@@ -81,7 +84,6 @@ export default function ReviewQueueScreen() {
 
   const totalPending = duplicates.length + conversions.length + pendingPayments.length
 
-  // Duplicate actions
   const handleDuplicate = async (leadCode: string, decision: "approve" | "reject") => {
     const label = decision === "approve" ? "APPROVE" : "REJECT"
     Alert.alert(
@@ -107,7 +109,6 @@ export default function ReviewQueueScreen() {
     )
   }
 
-  // Conversion actions
   const handleConversion = async (conversionCode: string, decision: "approve" | "reject") => {
     const label = decision === "approve" ? "APPROVE" : "REJECT"
     Alert.alert(
@@ -134,16 +135,14 @@ export default function ReviewQueueScreen() {
     )
   }
 
-  // Payment actions
   const handlePaymentApprove = async () => {
     if (!activePayment) return
-    if (!paymentForm.transactionReference.trim()) {
-      Alert.alert("Missing", "Transaction reference is required.")
-      return
-    }
     setBusyId(`pay-${activePayment.id}`)
     try {
-      await approvePayment(activePayment.id, paymentForm)
+      await approvePayment(activePayment.id, {
+        ...paymentForm,
+        transactionReference: paymentForm.transactionReference || "MOBILE-PAYMENT",
+      })
       setActivePayment(null)
       await load()
     } catch (err: any) {
@@ -204,10 +203,9 @@ export default function ReviewQueueScreen() {
         style={s.scroll}
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gradientStart} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND_BLUE} />
         }
       >
-        {/* Header */}
         <View style={s.headerRow}>
           <View style={s.headerLeft}>
             <Text style={s.headerTitle}>Review Queue</Text>
@@ -227,7 +225,7 @@ export default function ReviewQueueScreen() {
 
         {loading && (
           <View style={s.centerWrap}>
-            <ActivityIndicator size="large" color={COLORS.gradientStart} />
+            <ActivityIndicator size="large" color={BRAND_BLUE} />
           </View>
         )}
 
@@ -247,12 +245,18 @@ export default function ReviewQueueScreen() {
               <Text style={s.emptyText}>No pending commission claims.</Text>
             ) : (
               pendingPayments.map((item) => (
-                <View key={item.id} style={[s.card, SHADOWS.cardSm]}>
+                <View key={item.id} style={[s.card]}>
                   <Text style={s.codeText}>{item.invoice_code}</Text>
-                  <Text style={s.nameText}>{item.freelancer_name} | {item.freelancer_phone}</Text>
+                  <Text style={s.nameText}>
+                    {item.freelancer_name} | {item.freelancer_phone}
+                  </Text>
                   <Text style={s.subText}>Customer: {item.customer_name}</Text>
-                  <Text style={s.subText}>Bike: {item.bike_model} | Qty: {item.quantity}</Text>
-                  <Text style={s.amountText}>KES {item.commission_amount_kes?.toLocaleString()}</Text>
+                  <Text style={s.subText}>
+                    Bike: {item.bike_model} | Qty: {item.quantity}
+                  </Text>
+                  <Text style={s.amountText}>
+                    KES {item.commission_amount_kes?.toLocaleString()}
+                  </Text>
                   <View style={s.cardActions}>
                     <TouchableOpacity
                       style={s.approveBtn}
@@ -307,23 +311,35 @@ export default function ReviewQueueScreen() {
               <Text style={s.emptyText}>No pending duplicate reviews.</Text>
             ) : (
               duplicates.map((item) => (
-                <View key={item.id} style={[s.card, SHADOWS.cardSm]}>
+                <View key={item.id} style={[s.card]}>
                   <Text style={s.codeText}>{item.lead?.lead_code}</Text>
-                  <Text style={s.nameText}>{item.lead?.customer_full_name} - {item.lead?.customer_phone}</Text>
-                  <Text style={s.subText}>Bike: {item.lead?.bike_model} | County: {item.lead?.county}</Text>
-                  <Text style={s.subText}>Reason: {item.lead?.duplicate_override_reason || "N/A"}</Text>
-                  <Text style={s.subText}>Metric score: {item.metricScore ?? "N/A"}</Text>
+                  <Text style={s.nameText}>
+                    {item.lead?.customer_full_name} - {item.lead?.customer_phone}
+                  </Text>
+                  <Text style={s.subText}>
+                    Bike: {item.lead?.bike_model} | County: {item.lead?.county}
+                  </Text>
+                  <Text style={s.subText}>
+                    Reason: {item.lead?.duplicate_override_reason || "N/A"}
+                  </Text>
+                  <Text style={s.subText}>
+                    Metric score: {item.metricScore ?? "N/A"}
+                  </Text>
                   <View style={s.cardActions}>
                     <TouchableOpacity
                       style={s.approveBtn}
-                      onPress={() => handleDuplicate(item.lead?.lead_code || "", "approve")}
+                      onPress={() =>
+                        handleDuplicate(item.lead?.lead_code || "", "approve")
+                      }
                       disabled={busyId !== null || !item.lead?.lead_code}
                     >
                       <Text style={s.approveBtnText}>Approve</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={s.rejectBtn}
-                      onPress={() => handleDuplicate(item.lead?.lead_code || "", "reject")}
+                      onPress={() =>
+                        handleDuplicate(item.lead?.lead_code || "", "reject")
+                      }
                       disabled={busyId !== null || !item.lead?.lead_code}
                     >
                       <Text style={s.rejectBtnText}>Reject</Text>
@@ -342,9 +358,11 @@ export default function ReviewQueueScreen() {
               <Text style={s.emptyText}>No pending conversion reviews.</Text>
             ) : (
               conversions.map((item) => (
-                <View key={item.id} style={[s.card, SHADOWS.cardSm]}>
+                <View key={item.id} style={[s.card]}>
                   <Text style={s.codeText}>{item.conversionCode}</Text>
-                  <Text style={s.nameText}>Customer: {item.lead?.customer_full_name}</Text>
+                  <Text style={s.nameText}>
+                    Customer: {item.lead?.customer_full_name}
+                  </Text>
                   <View style={s.cardActions}>
                     <TouchableOpacity
                       style={s.viewBtn}
@@ -363,7 +381,7 @@ export default function ReviewQueueScreen() {
       {/* Payment Processing Modal */}
       <Modal visible={!!activePayment} animationType="slide" transparent>
         <View style={s.modalOverlay}>
-          <View style={s.modalCard}>
+          <ScrollView style={s.modalCard}>
             <Text style={s.modalTitle}>Process Payment</Text>
             <Text style={s.modalSub}>{activePayment?.invoice_code}</Text>
 
@@ -371,7 +389,9 @@ export default function ReviewQueueScreen() {
             <View style={s.pickerWrap}>
               <Picker
                 selectedValue={paymentForm.paymentMode}
-                onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMode: v })}
+                onValueChange={(v) =>
+                  setPaymentForm({ ...paymentForm, paymentMode: v })
+                }
                 style={s.picker}
               >
                 <Picker.Item label="M-Pesa" value="M-Pesa" />
@@ -380,6 +400,7 @@ export default function ReviewQueueScreen() {
               </Picker>
             </View>
 
+            {/* ── TRANSACTION REFERENCE — commented out in mobile ──
             <Text style={s.fieldLabel}>Transaction Reference *</Text>
             <TextInput
               style={s.input}
@@ -388,12 +409,15 @@ export default function ReviewQueueScreen() {
               placeholder="e.g. MPESA-TX123"
               placeholderTextColor="#94a3b8"
             />
+            */}
 
             <Text style={s.fieldLabel}>Amount Paid (KES)</Text>
             <TextInput
               style={s.input}
               value={paymentForm.amountPaid}
-              onChangeText={(v) => setPaymentForm({ ...paymentForm, amountPaid: v })}
+              onChangeText={(v) =>
+                setPaymentForm({ ...paymentForm, amountPaid: v })
+              }
               keyboardType="number-pad"
             />
 
@@ -401,7 +425,9 @@ export default function ReviewQueueScreen() {
             <TextInput
               style={s.input}
               value={paymentForm.adminRemarks}
-              onChangeText={(v) => setPaymentForm({ ...paymentForm, adminRemarks: v })}
+              onChangeText={(v) =>
+                setPaymentForm({ ...paymentForm, adminRemarks: v })
+              }
               placeholder="Optional"
               placeholderTextColor="#94a3b8"
             />
@@ -417,14 +443,22 @@ export default function ReviewQueueScreen() {
             </TouchableOpacity>
 
             <View style={s.modalActions}>
-              <TouchableOpacity style={s.rejectBtn} onPress={handlePaymentReject} disabled={busyId !== null}>
+              <TouchableOpacity
+                style={s.rejectBtn}
+                onPress={handlePaymentReject}
+                disabled={busyId !== null}
+              >
                 <Text style={s.rejectBtnText}>Reject</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setActivePayment(null)} disabled={busyId !== null}>
+              <TouchableOpacity
+                style={s.cancelBtn}
+                onPress={() => setActivePayment(null)}
+                disabled={busyId !== null}
+              >
                 <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 
@@ -438,43 +472,66 @@ export default function ReviewQueueScreen() {
             {activeConversion && (
               <>
                 <View style={s.detailSection}>
-                  <Text style={s.subText}>Customer: {activeConversion.lead?.customer_full_name}</Text>
-                  <Text style={s.subText}>Phone: {activeConversion.lead?.customer_phone}</Text>
-                  <Text style={s.subText}>Invoice #: {activeConversion.invoiceNumber}</Text>
-                  <Text style={s.subText}>Bike Sold: {activeConversion.bikeModelSold}</Text>
-                  <Text style={s.subText}>Quantity: {activeConversion.quantityPurchased}</Text>
-                  <Text style={s.subText}>Remarks: {activeConversion.validationRemarks || "None"}</Text>
+                  <Text style={s.subText}>
+                    Customer: {activeConversion.lead?.customer_full_name}
+                  </Text>
+                  <Text style={s.subText}>
+                    Phone: {activeConversion.lead?.customer_phone}
+                  </Text>
+                  <Text style={s.subText}>
+                    Invoice #: {activeConversion.invoiceNumber}
+                  </Text>
+                  <Text style={s.subText}>
+                    Bike Sold: {activeConversion.bikeModelSold}
+                  </Text>
+                  <Text style={s.subText}>
+                    Quantity: {activeConversion.quantityPurchased}
+                  </Text>
+                  <Text style={s.subText}>
+                    Remarks: {activeConversion.validationRemarks || "None"}
+                  </Text>
                 </View>
 
-                {/* Documents */}
                 {activeConversion.invoice_photo_url && (
                   <TouchableOpacity
                     style={s.docLink}
-                    onPress={() => Linking.openURL(activeConversion.invoice_photo_url!)}
+                    onPress={() =>
+                      Linking.openURL(activeConversion.invoice_photo_url!)
+                    }
                   >
-                    <Text style={s.docLinkText}>📎 View Invoice Photo</Text>
+                    <Text style={s.docLinkText}>
+                      📎 View Invoice Photo
+                    </Text>
                   </TouchableOpacity>
                 )}
                 {activeConversion.sales_agreement_url && (
                   <TouchableOpacity
                     style={s.docLink}
-                    onPress={() => Linking.openURL(activeConversion.sales_agreement_url!)}
+                    onPress={() =>
+                      Linking.openURL(activeConversion.sales_agreement_url!)
+                    }
                   >
-                    <Text style={s.docLinkText}>📎 View Sales Agreement</Text>
+                    <Text style={s.docLinkText}>
+                      📎 View Sales Agreement
+                    </Text>
                   </TouchableOpacity>
                 )}
 
                 <View style={s.modalActions}>
                   <TouchableOpacity
                     style={s.approveBtn}
-                    onPress={() => handleConversion(activeConversion.conversionCode, "approve")}
+                    onPress={() =>
+                      handleConversion(activeConversion.conversionCode, "approve")
+                    }
                     disabled={busyId !== null}
                   >
                     <Text style={s.approveBtnText}>Approve Sale</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={s.rejectBtn}
-                    onPress={() => handleConversion(activeConversion.conversionCode, "reject")}
+                    onPress={() =>
+                      handleConversion(activeConversion.conversionCode, "reject")
+                    }
                     disabled={busyId !== null}
                   >
                     <Text style={s.rejectBtnText}>Reject Sale</Text>
@@ -483,7 +540,11 @@ export default function ReviewQueueScreen() {
               </>
             )}
 
-            <TouchableOpacity style={s.cancelBtn} onPress={() => setActiveConversion(null)} disabled={busyId !== null}>
+            <TouchableOpacity
+              style={s.cancelBtn}
+              onPress={() => setActiveConversion(null)}
+              disabled={busyId !== null}
+            >
               <Text style={s.cancelBtnText}>Close</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -518,7 +579,13 @@ const s = StyleSheet.create({
   headerLeft: { flex: 1 },
   headerTitle: { fontSize: 22, fontWeight: "700", color: "#0f172a" },
   headerSub: { marginTop: 4, fontSize: 13, color: "#64748b" },
-  backBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0" },
+  backBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
   backText: { fontSize: 13, fontWeight: "500", color: "#64748b" },
 
   tabRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
@@ -534,16 +601,19 @@ const s = StyleSheet.create({
     borderColor: "#e2e8f0",
     backgroundColor: "#fff",
   },
-  tabBtnActive: { borderColor: COLORS.gradientStart, backgroundColor: "#eff6ff" },
+  tabBtnActive: {
+    borderColor: BRAND_BLUE,
+    backgroundColor: "#eff6ff",
+  },
   tabText: { fontSize: 13, fontWeight: "600", color: "#64748b" },
-  tabTextActive: { color: COLORS.gradientStart },
+  tabTextActive: { color: BRAND_BLUE },
   badge: {
     backgroundColor: "#f1f5f9",
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 999,
   },
-  badgeActive: { backgroundColor: COLORS.gradientStart },
+  badgeActive: { backgroundColor: BRAND_BLUE },
   badgeText: { fontSize: 11, fontWeight: "700", color: "#64748b" },
   badgeTextActive: { color: "#fff" },
 
@@ -554,8 +624,14 @@ const s = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    ...SHADOWS.cardSm,
   },
-  codeText: { fontFamily: "monospace", fontSize: 12, fontWeight: "700", color: COLORS.gradientStart },
+  codeText: {
+    fontFamily: "monospace",
+    fontSize: 12,
+    fontWeight: "700",
+    color: BRAND_BLUE,
+  },
   nameText: { fontSize: 14, fontWeight: "600", color: "#1e293b", marginTop: 2 },
   subText: { fontSize: 12, color: "#64748b", marginTop: 2 },
   amountText: { fontSize: 16, fontWeight: "700", color: "#10b981", marginTop: 6 },
@@ -580,7 +656,7 @@ const s = StyleSheet.create({
   rejectBtnText: { color: "#dc2626", fontSize: 13, fontWeight: "700" },
   viewBtn: {
     flex: 1,
-    backgroundColor: COLORS.gradientStart,
+    backgroundColor: BRAND_BLUE,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
@@ -599,7 +675,12 @@ const s = StyleSheet.create({
   centerWrap: { marginTop: 32, alignItems: "center" },
   errorWrap: { marginTop: 16, alignItems: "center" },
   errorText: { fontSize: 14, color: "#dc2626", textAlign: "center", marginBottom: 12 },
-  retryBtn: { backgroundColor: COLORS.gradientStart, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retryBtn: {
+    backgroundColor: BRAND_BLUE,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
   retryBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
 
   // Modal
@@ -616,8 +697,19 @@ const s = StyleSheet.create({
     maxHeight: "90%",
   },
   modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", marginBottom: 4 },
-  modalSub: { fontSize: 12, color: "#64748b", marginBottom: 16, fontFamily: "monospace" },
-  fieldLabel: { fontSize: 12, fontWeight: "600", color: "#475569", marginBottom: 4, marginTop: 10 },
+  modalSub: {
+    fontSize: 12,
+    color: "#64748b",
+    marginBottom: 16,
+    fontFamily: "monospace",
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 4,
+    marginTop: 10,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
@@ -650,5 +742,5 @@ const s = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 6,
   },
-  docLinkText: { fontSize: 13, fontWeight: "600", color: COLORS.gradientStart },
+  docLinkText: { fontSize: 13, fontWeight: "600", color: BRAND_BLUE },
 })

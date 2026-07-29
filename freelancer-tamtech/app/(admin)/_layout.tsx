@@ -12,6 +12,7 @@ export default function AdminLayout() {
       <Stack.Screen name="review" />
       <Stack.Screen name="reports" />
       <Stack.Screen name="freelancers" />
+      <Stack.Screen name="leads" />
       <Stack.Screen name="convertedsales" />
       <Stack.Screen name="paymentrecords" />
       <Stack.Screen name="users" />

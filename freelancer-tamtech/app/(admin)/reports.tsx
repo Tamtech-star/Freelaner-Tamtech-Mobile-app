@@ -19,6 +19,8 @@ import {
 } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
+const BRAND_BLUE = "#2881FA"
+
 type Tab = "conversion" | "county" | "reconciliation"
 
 export default function ReportsScreen() {
