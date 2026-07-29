@@ -256,6 +256,11 @@ export async function deleteFreelancer(freelancerId: string): Promise<void> {
   await api.post('/admin/freelancers/delete', { freelancerId })
 }
 
+export async function getFreelancerById(id: string): Promise<FreelancerDetail> {
+  const res = await api.get<FreelancerDetail>(`/portal/admin/freelancers/${id}`)
+  return res.data
+}
+
 // ── Leads ──────────────────────────────────────────────────────
 
 export async function getAdminLeads(): Promise<LeadRow[]> {
