@@ -14,13 +14,19 @@ let isRedirecting = false
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    try {
-      const token = await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN)
-      if (token && config.headers) {
-        config.headers.Authorization = 'Bearer ' + token
+    const url = (config as any).url || ''
+    // Never attach stale tokens to auth endpoints
+    const isAuthEndpoint = url.includes('/auth/mobile-login') || url.includes('/auth/register') || url.includes('/portal/freelancers/register')
+
+    if (!isAuthEndpoint) {
+      try {
+        const token = await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN)
+        if (token && config.headers) {
+          config.headers.Authorization = 'Bearer ' + token
+        }
+      } catch {
+        // SecureStore might fail in some environments
       }
-    } catch {
-      // SecureStore might fail in some environments
     }
     return config
   },

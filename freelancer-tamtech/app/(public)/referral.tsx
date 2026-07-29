@@ -23,11 +23,28 @@ export default function ReferralScreen() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerIdNumber, setCustomerIdNumber] = useState("");
-  const [bikeModel, setBikeModel] = useState("");
+  
+  // Replaced bikeModel with paymentMode
+  const [paymentMode, setPaymentMode] = useState("");
+  
+  // Added Quantity state (defaults to "1")
+  const [quantity, setQuantity] = useState("1");
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const incrementQuantity = () => {
+    const currentQty = parseInt(quantity || "0", 10);
+    setQuantity(String(currentQty + 1));
+  };
+
+  const decrementQuantity = () => {
+    const currentQty = parseInt(quantity || "0", 10);
+    if (currentQty > 1) {
+      setQuantity(String(currentQty - 1));
+    }
+  };
 
   const handleSubmit = async () => {
     if (!referrerName.trim() || !referrerPhone.trim()) {
@@ -36,6 +53,10 @@ export default function ReferralScreen() {
     }
     if (!customerName.trim() || !customerPhone.trim() || !customerIdNumber.trim()) {
       Alert.alert("Missing Fields", "Customer name, phone, and ID number are required.");
+      return;
+    }
+    if (!paymentMode) {
+      Alert.alert("Missing Fields", "Please select a payment mode.");
       return;
     }
 
@@ -48,7 +69,8 @@ export default function ReferralScreen() {
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
         customer_id_number: customerIdNumber.trim() || undefined,
-        bike_model: bikeModel.trim() || undefined,
+        payment_mode: paymentMode, // Added to payload
+        quantity: parseInt(quantity || "1", 10), // Added to payload
         referral_code: referralCode.trim() || undefined,
       });
       setSuccess(true);
@@ -64,7 +86,7 @@ export default function ReferralScreen() {
       <View style={styles.container}>
         <View style={styles.successWrap}>
           <View style={styles.successIcon}>
-            <Text style={styles.successIconText}>âœ“</Text>
+            <Text style={styles.successIconText}>✓</Text>
           </View>
           <Text style={styles.successTitle}>Referral Submitted!</Text>
           <Text style={styles.successSubtitle}>
@@ -78,14 +100,16 @@ export default function ReferralScreen() {
               setReferralCode("");
               setCustomerName("");
               setCustomerPhone("");
-              setBikeModel("");
+              setCustomerIdNumber("");
+              setPaymentMode("");
+              setQuantity("1");
             }}
             style={styles.submitBtn}
           >
             <Text style={styles.submitBtnText}>Submit Another Referral</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
-            <Text style={styles.backLinkText}>â† Back to Login</Text>
+            <Text style={styles.backLinkText}>← Back to Login</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -188,18 +212,52 @@ export default function ReferralScreen() {
               placeholderTextColor={COLORS.placeholder}
             />
           </View>
+          
+          {/* New Payment Mode Field */}
           <View style={styles.field}>
-            <Text style={styles.label}>Bike Model Interested In </Text>
+            <Text style={styles.label}>Payment Mode Interested *</Text>
             <View style={styles.pickerWrap}>
               <Picker
-                selectedValue={bikeModel}
-                onValueChange={(v) => setBikeModel(v)}
+                selectedValue={paymentMode}
+                onValueChange={(v) => setPaymentMode(v)}
                 style={styles.picker}
               >
-                <Picker.Item label="Select a bike model" value="" />
-                <Picker.Item label="EKON450M1V2" value="EKON450M1V2" />
-                <Picker.Item label="EKON450M2V2" value="EKON450M2V2" />
+                <Picker.Item label="Select payment mode" value="" />
+                <Picker.Item label="Loan" value="Loan" />
+                <Picker.Item label="Cash" value="Cash" />
               </Picker>
+            </View>
+          </View>
+
+          {/* New Quantity Field with Stepper */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Quantity *</Text>
+            <View style={styles.stepperContainer}>
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={decrementQuantity}
+              >
+                <Text style={styles.stepperBtnText}>-</Text>
+              </TouchableOpacity>
+              
+              <TextInput
+                style={styles.stepperInput}
+                value={quantity}
+                onChangeText={(text) => {
+                  // Only allow numeric input
+                  const numericText = text.replace(/[^0-9]/g, "");
+                  setQuantity(numericText);
+                }}
+                keyboardType="numeric"
+                maxLength={3}
+              />
+              
+              <TouchableOpacity
+                style={styles.stepperBtn}
+                onPress={incrementQuantity}
+              >
+                <Text style={styles.stepperBtnText}>+</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -295,6 +353,41 @@ const styles = StyleSheet.create({
   picker: {
     height: 48,
   },
+  
+  // New Styles for the Quantity Stepper
+  stepperContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stepperBtn: {
+    backgroundColor: COLORS.inputBg,
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 8,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperBtnText: {
+    fontSize: 24,
+    color: COLORS.heading,
+    fontWeight: "500",
+  },
+  stepperInput: {
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 8,
+    height: 44,
+    minWidth: 60,
+    marginHorizontal: 12,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.heading,
+    backgroundColor: COLORS.inputBg,
+  },
+
   errorBanner: {
     backgroundColor: "#fee2e2",
     borderRadius: 8,
@@ -362,4 +455,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
