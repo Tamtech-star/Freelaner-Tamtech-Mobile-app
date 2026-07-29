@@ -78,6 +78,7 @@ export interface LeadRow {
   customer_id_number: string
   location: string
   county: string
+  bike_model: string
   payment_type: string
   quantity_interested: number
   lead_notes: string | null
@@ -87,6 +88,14 @@ export interface LeadRow {
   created_at: string
   freelancer_id: string
   freelancers: { full_name: string; freelancer_code: string } | null
+}
+
+export interface FreelancerDetail extends FreelancerRow {
+  total_leads: number
+  converted_leads: number
+  conversion_rate: number
+  total_commission_earned: number
+  total_commission_paid: number
 }
 
 export interface ConversionRatio {
