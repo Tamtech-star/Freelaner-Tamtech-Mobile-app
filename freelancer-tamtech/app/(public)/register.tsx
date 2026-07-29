@@ -180,13 +180,19 @@ export default function RegisterScreen() {
           {/* Occupation */}
           <View style={s.formGroup}>
             <Text style={s.label}>Occupation <Text style={s.required}>*</Text></Text>
-            <TextInput
-              style={s.input}
-              value={form.occupation}
-              onChangeText={(v) => updateField("occupation", v)}
-              placeholder="e.g. Boda boda rider"
-              placeholderTextColor={COLORS.placeholder}
-            />
+            <View style={s.pickerWrap}>
+              <Picker
+                selectedValue={form.occupation}
+                onValueChange={(v) => updateField("occupation", v)}
+                style={s.picker}
+              >
+                <Picker.Item label="Select occupation..." value="" />
+                <Picker.Item label="Employed" value="employed" />
+                <Picker.Item label="Self-Employed" value="self_employed" />
+                <Picker.Item label="Student" value="student" />
+                <Picker.Item label="Others" value="others" />
+              </Picker>
+            </View>
           </View>
 
           {/* M-Pesa Phone */}
