@@ -10,8 +10,11 @@ export default function AdminLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="review" />
-      <Stack.Screen name="freelancers" />
       <Stack.Screen name="reports" />
+      <Stack.Screen name="freelancers" />
+      <Stack.Screen name="convertedsales" />
+      <Stack.Screen name="paymentrecords" />
+      <Stack.Screen name="users" />
     </Stack>
   )
 }
