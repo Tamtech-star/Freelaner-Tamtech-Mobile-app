@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+imporg t { create } from 'zustand'
 import type { AuthState, AuthUser, UserRole } from '../types'
 import { mobileLogin, logout as logoutApi, getStoredAuth } from '../api/auth'
 
@@ -38,7 +38,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       return { success: true }
     } catch (error: any) {
+      console.log('Login error:', JSON.stringify({
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      }))
       const message =
+        error?.response?.data?.error ||
         error?.response?.data?.message ||
         error?.message ||
         'Login failed. Please check your credentials.'
