@@ -160,7 +160,7 @@ export default function LeadsScreen() {
               <Text style={s.subText}> {item.county}</Text>
             </View>
             <View style={s.detailRow}>
-              <Text style={s.subText}>🏍 {item.bike_model}</Text>
+              <Text style={s.subText}>{item.bike_model}</Text>
               <Text style={s.subText}>Qty: {item.quantity_interested}</Text>
             </View>
             <View style={s.detailRow}>
