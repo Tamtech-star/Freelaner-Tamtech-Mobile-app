@@ -1,0 +1,234 @@
+import { useState, useCallback, useEffect, useMemo } from "react"
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  RefreshControl,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native"
+import { router } from "expo-router"
+import { getFreelancers, type FreelancerRow } from "../../src/api/admin"
+import { COLORS, SHADOWS } from "../../src/constants/config"
+
+const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
+  approved: { bg: "#d1fae5", text: "#065f46" },
+  pending: { bg: "#fef3c7", text: "#92400e" },
+  rejected: { bg: "#fee2e2", text: "#991b1b" },
+  deactivated: { bg: "#f1f5f9", text: "#64748b" },
+}
+
+export default function FreelancersScreen() {
+  const [freelancers, setFreelancers] = useState<FreelancerRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [search, setSearch] = useState("")
+
+  const load = useCallback(async () => {
+    try {
+      setError(null)
+      const data = await getFreelancers()
+      setFreelancers(data)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Failed to load freelancers.")
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await load()
+  }, [load])
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return freelancers
+    const q = search.toLowerCase()
+    return freelancers.filter(
+      (f) =>
+        f.full_name.toLowerCase().includes(q) ||
+        f.email.toLowerCase().includes(q) ||
+        (f.freelancer_code || "").toLowerCase().includes(q) ||
+        (f.display_code || "").toLowerCase().includes(q)
+    )
+  }, [freelancers, search])
+
+  const active = freelancers.filter((f) => f.registration_status === "approved").length
+
+  const statusBadge = (status: string) => {
+    const s = STATUS_BADGE[status] || { bg: "#f1f5f9", text: "#475569" }
+    return { s }
+  }
+
+  const formatDate = (d: string) => {
+    try {
+      return new Date(d).toLocaleDateString("en-KE", { year: "numeric", month: "short", day: "numeric" })
+    } catch {
+      return d || ""
+    }
+  }
+
+  return (
+    <View style={s.container}>
+      <View style={s.brandBar}>
+        <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
+      </View>
+
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gradientStart} />
+        }
+      >
+        <View style={s.headerRow}>
+          <View style={s.headerLeft}>
+            <Text style={s.headerTitle}>Freelancers</Text>
+            <Text style={s.headerSub}>
+              {freelancers.length} total | {active} active
+            </Text>
+          </View>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Text style={s.backText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Search */}
+        <View style={s.searchWrap}>
+          <TextInput
+            placeholder="Search by name, email or code..."
+            placeholderTextColor="#94a3b8"
+            value={search}
+            onChangeText={setSearch}
+            style={s.searchInput}
+          />
+        </View>
+
+        {loading && (
+          <View style={s.centerWrap}>
+            <ActivityIndicator size="large" color={COLORS.gradientStart} />
+          </View>
+        )}
+
+        {error && (
+          <View style={s.errorWrap}>
+            <Text style={s.errorText}>{error}</Text>
+            <TouchableOpacity onPress={load} style={s.retryBtn}>
+              <Text style={s.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && filtered.length === 0 && (
+          <Text style={s.emptyText}>
+            {search ? "No freelancers match your search." : "No freelancers registered yet."}
+          </Text>
+        )}
+
+        {filtered.map((f) => {
+          const badge = statusBadge(f.registration_status)
+          return (
+            <View key={f.id} style={[s.card, SHADOWS.cardSm]}>
+              <View style={s.cardRow1}>
+                <Text style={s.nameText}>{f.full_name}</Text>
+                <View style={[s.statusBadge, { backgroundColor: badge.s.bg }]}>
+                  <Text style={[s.statusText, { color: badge.s.text }]}>
+                    {f.registration_status}
+                  </Text>
+                </View>
+              </View>
+              <Text style={s.subText}>Email: {f.email}</Text>
+              <Text style={s.subText}>Phone: {f.mpesa_phone || "N/A"}</Text>
+              <View style={s.cardRow1}>
+                <Text style={s.codeText}>
+                  {f.display_code || f.freelancer_code}
+                </Text>
+                <Text style={s.dateText}>{formatDate(f.created_at)}</Text>
+              </View>
+            </View>
+          )
+        })}
+      </ScrollView>
+    </View>
+  )
+}
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  brandBar: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#fff",
+    paddingVertical: 16,
+  },
+  brandText: { fontSize: 20, fontWeight: "700", color: "#1e293b" },
+
+  scroll: { flex: 1, paddingHorizontal: 16 },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  headerLeft: { flex: 1 },
+  headerTitle: { fontSize: 22, fontWeight: "700", color: "#0f172a" },
+  headerSub: { marginTop: 4, fontSize: 13, color: "#64748b" },
+  backBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0" },
+  backText: { fontSize: 13, fontWeight: "500", color: "#64748b" },
+
+  searchWrap: { marginBottom: 14 },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#0f172a",
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+  },
+  cardRow1: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  nameText: { fontSize: 14, fontWeight: "700", color: "#1e293b" },
+  statusBadge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  statusText: { fontSize: 10, fontWeight: "700", textTransform: "uppercase" },
+  subText: { fontSize: 12, color: "#64748b", marginTop: 3 },
+  codeText: {
+    fontFamily: "monospace",
+    fontSize: 11,
+    color: COLORS.gradientStart,
+    fontWeight: "700",
+    marginTop: 6,
+  },
+  dateText: { fontSize: 11, color: "#94a3b8", marginTop: 6 },
+
+  emptyText: { textAlign: "center", color: "#94a3b8", marginTop: 32, fontSize: 14 },
+  centerWrap: { marginTop: 32, alignItems: "center" },
+  errorWrap: { marginTop: 16, alignItems: "center" },
+  errorText: { fontSize: 14, color: "#dc2626", textAlign: "center", marginBottom: 12 },
+  retryBtn: { backgroundColor: COLORS.gradientStart, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  retryBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+})
