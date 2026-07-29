@@ -32,8 +32,7 @@ export default function LoginScreen() {
     if (result.success) {
       const { role } = useAuthStore.getState()
       if (role === "admin") {
-        // Admin mobile access — to be implemented later
-        Alert.alert("Admin", "Admin mobile access is coming soon.")
+        router.replace("/(admin)")
       } else if (role === "sales_agent") {
         router.replace("/(sales-record)")
       } else if (role === "freelancer") {
@@ -167,7 +166,7 @@ export default function LoginScreen() {
             Sign Up to Become a Freelancer
           </Link>
           <Text style={[styles.footerText, { marginTop: 16 }]}>Not a freelancer?</Text>
-          <Link href="/(public)/referral" style={styles.footerLink}>
+          <Link href="/(public)/referral" style={styles.footerLink}>git status
             Submit a Referral Without Login
           </Link>
         </View>
