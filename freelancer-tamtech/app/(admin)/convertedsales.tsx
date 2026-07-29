@@ -191,8 +191,9 @@ export default function ConvertedSalesScreen() {
       {/* Detail Modal */}
       <Modal visible={!!selectedSale} animationType="slide" transparent>
         <View style={s.modalOverlay}>
-          <ScrollView style={s.modalCard}>
-            <Text style={s.modalTitle}>Sale Details</Text>
+          <View style={s.modalCard}>
+            <ScrollView style={s.modalScroll}>
+              <Text style={s.modalTitle}>Sale Details</Text>
             <Text style={s.modalSub}>{selectedSale?.conversion_code}</Text>
 
             {selectedSale && (
@@ -286,13 +287,15 @@ export default function ConvertedSalesScreen() {
               </>
             )}
 
+            </ScrollView>
+
             <TouchableOpacity
               style={s.closeBtn}
               onPress={() => setSelectedSale(null)}
             >
               <Text style={s.closeBtnText}>Close</Text>
             </TouchableOpacity>
-          </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>
@@ -426,6 +429,7 @@ const s = StyleSheet.create({
     padding: 20,
     maxHeight: "85%",
   },
+  modalScroll: { flex: 0 },
   modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", marginBottom: 4 },
   modalSub: { fontSize: 12, color: "#64748b", marginBottom: 16, fontFamily: "monospace" },
   detailSection: {
