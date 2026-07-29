@@ -30,7 +30,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401 && !isRedirecting) {
+    // Don't clear tokens for login/register endpoints — 401 is expected for bad credentials
+    const url = (error.config as any)?.url || ''
+    const isAuthEndpoint = url.includes('/auth/mobile-login') || url.includes('/auth/register')
+
+    if (error.response?.status === 401 && !isRedirecting && !isAuthEndpoint) {
       isRedirecting = true
       try {
         await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN)
