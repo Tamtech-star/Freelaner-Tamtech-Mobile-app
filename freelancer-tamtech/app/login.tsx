@@ -165,9 +165,9 @@ export default function LoginScreen() {
           <Link href="/(public)/register" style={styles.footerLink}>
             Sign Up to Become a Freelancer
           </Link>
-          <Text style={[styles.footerText, { marginTop: 16 }]}>Not a freelancer?</Text>
-          <Link href="/(public)/referral" style={styles.footerLink}>git status
-            Submit a Referral Witgin screen so admin users nahout Login
+          <Text style={[styles.footerText, { marginTop: 16 }]}>Not an agent or freelancer?</Text>
+          <Link href="/(public)/referral" style={styles.footerLink}>
+            Submit a Referral Without Login
           </Link>
         </View>
       </ScrollView>
