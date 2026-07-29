@@ -173,14 +173,14 @@ export interface AdminUserRow {
   last_login_at: string | null
 }
 
-// ── Dashboard ──────────────────────────────────────────────────
+// Dashboard 
 
 export async function getAdminDashboard(): Promise<AdminMetrics> {
   const res = await api.get<AdminMetrics>('/portal/dashboard/admin')
   return res.data
 }
 
-// ── Review Queue ───────────────────────────────────────────────
+//  Review Queue 
 
 export async function getReviewDuplicates(): Promise<DuplicateLeadItem[]> {
   const res = await api.get<{ items: DuplicateLeadItem[] }>('/portal/reviews/duplicates')
@@ -245,7 +245,7 @@ export async function rejectPayment(invoiceId: string): Promise<void> {
   })
 }
 
-// ── Freelancers ────────────────────────────────────────────────
+// Freelancers 
 
 export async function getFreelancers(): Promise<FreelancerRow[]> {
   const res = await api.get<{ freelancers: FreelancerRow[] }>('/portal/admin/freelancers')

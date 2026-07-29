@@ -99,14 +99,9 @@ export default function AdminUsersScreen() {
               {users.length} total | {activeUsers} active
             </Text>
           </View>
-          <View style={s.headerActions}>
-            <TouchableOpacity onPress={handleCsvDownload} style={s.csvBtn}>
-              <Text style={s.csvBtnText}>⬇ CSV</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-              <Text style={s.backText}>Back</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Text style={s.backText}>Back</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Search */}
