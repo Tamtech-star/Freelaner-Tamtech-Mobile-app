@@ -55,8 +55,8 @@ export default function LoginScreen() {
     })
     if (screen === "sales") {
       router.replace("/(sales-record)")
-    } else if (screen === "admin") {
-      Alert.alert("Admin", "Admin mobile access is coming soon.")
+    } else     if (screen === "admin") {
+      router.replace("/(admin)")
     } else if (screen === "freelancer") {
       router.replace("/(freelancer)")
     }
@@ -167,7 +167,7 @@ export default function LoginScreen() {
           </Link>
           <Text style={[styles.footerText, { marginTop: 16 }]}>Not a freelancer?</Text>
           <Link href="/(public)/referral" style={styles.footerLink}>git status
-            Submit a Referral Without Login
+            Submit a Referral Witgin screen so admin users nahout Login
           </Link>
         </View>
       </ScrollView>
