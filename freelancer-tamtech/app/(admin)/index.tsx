@@ -14,6 +14,10 @@ import { getAdminDashboard } from "../../src/api/admin"
 import type { AdminMetrics } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
+// Web-app brand gradient: from-[#2881FA] to-[#45E0D7]
+const BRAND_BLUE = "#2881FA"
+const BRAND_TEAL = "#45E0D7"
+
 export default function AdminDashboardScreen() {
   const { user, logout } = useAuthStore()
   const [metrics, setMetrics] = useState<AdminMetrics["metrics"] | null>(null)
@@ -72,6 +76,7 @@ export default function AdminDashboardScreen() {
 
   return (
     <View style={s.container}>
+      {/* Brand Bar */}
       <View style={s.brandBar}>
         <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
       </View>
@@ -80,9 +85,10 @@ export default function AdminDashboardScreen() {
         style={s.scroll}
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gradientStart} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND_BLUE} />
         }
       >
+        {/* Header */}
         <View style={s.headerRow}>
           <View style={s.headerLeft}>
             <Text style={s.headerTitle}>Admin Dashboard</Text>
@@ -95,45 +101,70 @@ export default function AdminDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Actions */}
+        {/* Quick-Action Cards — 7 sections */}
         <View style={s.cardRow}>
           <TouchableOpacity
-            style={[s.actionCard, SHADOWS.cardSm]}
+            style={[s.actionCard]}
             onPress={() => router.push("/(admin)/review")}
           >
             <Text style={s.actionIcon}>🔍</Text>
             <Text style={s.actionTitle}>Review Queue</Text>
-            <Text style={s.actionDesc}>Pending payments, duplicates & conversions</Text>
+            <Text style={s.actionDesc}>Approve payments, duplicates & conversions</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[s.actionCard, SHADOWS.cardSm]}
-            onPress={() => router.push("/(admin)/freelancers")}
-          >
-            <Text style={s.actionIcon}>👥</Text>
-            <Text style={s.actionTitle}>Freelancers</Text>
-            <Text style={s.actionDesc}>Manage registered freelancers</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[s.actionCard, SHADOWS.cardSm]}
+            style={[s.actionCard]}
             onPress={() => router.push("/(admin)/reports")}
           >
             <Text style={s.actionIcon}>📊</Text>
             <Text style={s.actionTitle}>Reports</Text>
-            <Text style={s.actionDesc}>Conversion rates, county-wise & reconciliation</Text>
+            <Text style={s.actionDesc}>Conversion rates, county analytics & reconciliation</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.actionCard]}
+            onPress={() => router.push("/(admin)/convertedsales")}
+          >
+            <Text style={s.actionIcon}>🔄</Text>
+            <Text style={s.actionTitle}>Converted Sales</Text>
+            <Text style={s.actionDesc}>View all converted freelancer leads</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.actionCard]}
+            onPress={() => router.push("/(admin)/paymentrecords")}
+          >
+            <Text style={s.actionIcon}>💰</Text>
+            <Text style={s.actionTitle}>Payment Records</Text>
+            <Text style={s.actionDesc}>Track all commission payments</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.actionCard]}
+            onPress={() => router.push("/(admin)/freelancers")}
+          >
+            <Text style={s.actionIcon}>👥</Text>
+            <Text style={s.actionTitle}>Manage Freelancers</Text>
+            <Text style={s.actionDesc}>View, search and delete freelancers</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.actionCard]}
+            onPress={() => router.push("/(admin)/users")}
+          >
+            <Text style={s.actionIcon}>👤</Text>
+            <Text style={s.actionTitle}>Admin Users</Text>
+            <Text style={s.actionDesc}>Manage admin accounts</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Loading state */}
         {loading && (
           <View style={s.centerWrap}>
-            <ActivityIndicator size="large" color={COLORS.gradientStart} />
+            <ActivityIndicator size="large" color={BRAND_BLUE} />
             <Text style={s.loadingText}>Loading metrics...</Text>
           </View>
         )}
 
-        {/* Error state */}
         {error && (
           <View style={s.errorWrap}>
             <Text style={s.errorText}>{error}</Text>
@@ -143,11 +174,12 @@ export default function AdminDashboardScreen() {
           </View>
         )}
 
-        {/* Metrics Grid */}
+        {/* Platform Metrics — 6 cards; 3 visible & clickable */}
         {metrics && (
           <View style={s.metricsSection}>
             <Text style={s.sectionTitle}>Platform Metrics</Text>
             <View style={s.metricsGrid}>
+              {/* ── VISIBLE & CLICKABLE ── */}
               <MetricCard
                 label="Total Freelancers"
                 value={metrics.total_freelancers}
@@ -155,32 +187,23 @@ export default function AdminDashboardScreen() {
                 onPress={() => router.push("/(admin)/freelancers")}
               />
               <MetricCard
-                label="Active Freelancers"
-                value={metrics.active_freelancers}
-                color="#10b981"
-              />
-              <MetricCard
                 label="Total Leads"
                 value={metrics.total_leads}
                 color="#3b82f6"
+                onPress={() => router.push("/(admin)/convertedsales")}
               />
               <MetricCard
                 label="Converted Sales"
                 value={metrics.converted_sales}
                 color="#f59e0b"
+                onPress={() => router.push("/(admin)/convertedsales")}
               />
-              <MetricCard
-                label="Pending Validations"
-                value={metrics.pending_validations}
-                color="#ef4444"
-                onPress={() => router.push("/(admin)/review")}
-              />
-              <MetricCard
-                label="Pending Payments"
-                value={metrics.pending_payments}
-                color="#8b5cf6"
-                onPress={() => router.push("/(admin)/review")}
-              />
+
+              {/* ── COMMENTED OUT (not required visually) ──
+              <MetricCard label="Active Freelancers"    value={metrics.active_freelancers}    color="#10b981" />
+              <MetricCard label="Pending Validations"   value={metrics.pending_validations}   color="#ef4444" />
+              <MetricCard label="Pending Payments"      value={metrics.pending_payments}      color="#8b5cf6" />
+              */}
             </View>
           </View>
         )}
@@ -216,28 +239,35 @@ const s = StyleSheet.create({
   headerSub: { marginTop: 4, fontSize: 14, color: "#64748b" },
   logoutBtn: {
     borderWidth: 1,
-    borderColor: "#fecaca",
+    borderColor: "#e2e8f0",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "#fef2f2",
   },
   logoutText: { fontSize: 12, fontWeight: "500", color: "#dc2626" },
 
-  cardRow: { gap: 12, marginBottom: 24 },
+  cardRow: { gap: 10, marginBottom: 24 },
   actionCard: {
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#e2e8f0",
     borderRadius: 12,
     padding: 16,
+    ...SHADOWS.cardSm,
   },
   actionIcon: { fontSize: 24, marginBottom: 8 },
   actionTitle: { fontSize: 15, fontWeight: "700", color: "#1e293b" },
   actionDesc: { marginTop: 2, fontSize: 12, color: "#64748b", lineHeight: 16 },
 
   metricsSection: { marginTop: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#334155", marginBottom: 12 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
   metricsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -254,14 +284,20 @@ const s = StyleSheet.create({
     ...SHADOWS.cardSm,
   },
   metricValue: { fontSize: 22, fontWeight: "800", color: "#1e293b" },
-  metricLabel: { fontSize: 11, color: "#64748b", marginTop: 4, textTransform: "uppercase", letterSpacing: 0.5 },
+  metricLabel: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
 
   centerWrap: { marginTop: 32, alignItems: "center" },
   loadingText: { marginTop: 8, fontSize: 14, color: "#64748b" },
   errorWrap: { marginTop: 24, alignItems: "center", paddingHorizontal: 16 },
   errorText: { fontSize: 14, color: "#dc2626", textAlign: "center", marginBottom: 12 },
   retryBtn: {
-    backgroundColor: COLORS.gradientStart,
+    backgroundColor: BRAND_BLUE,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
