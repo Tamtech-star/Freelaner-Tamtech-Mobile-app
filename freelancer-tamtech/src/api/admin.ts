@@ -1,7 +1,6 @@
 import api from './client'
 
-// ── Types ──────────────────────────────────────────────────────
-
+//  Types 
 export interface AdminMetrics {
   metrics: {
     total_freelancers: number
@@ -261,29 +260,32 @@ export async function getFreelancerById(id: string): Promise<FreelancerDetail> {
   return res.data
 }
 
-// ── Leads ──────────────────────────────────────────────────────
-
+//  Leads 
 export async function getAdminLeads(): Promise<LeadRow[]> {
   const res = await api.get<{ leads: LeadRow[] }>('/portal/admin/leads')
   return res.data.leads || []
 }
 
-// ── Converted Sales ────────────────────────────────────────────
+// Converted Sales 
+
+export async function getAllSales(): Promise<ConvertedSaleRow[]> {
+  const res = await api.get<{ items: ConvertedSaleRow[] }>('/sales-record/history')
+  return res.data.items || []
+}
 
 export async function getConvertedSales(): Promise<ConvertedSaleRow[]> {
   const res = await api.get<{ items: ConvertedSaleRow[] }>('/admin/convertedsales')
   return res.data.items || []
 }
 
-// ── Payment Records ────────────────────────────────────────────
+//  Payment Records 
 
 export async function getPaymentRecords(): Promise<PaymentRecordRow[]> {
   const res = await api.get<{ items: PaymentRecordRow[] }>('/admin/paymentrecords')
   return res.data.items || []
 }
 
-// ── Reports ────────────────────────────────────────────────────
-
+// Reports 
 export async function getConversionRatio(): Promise<ConversionRatio> {
   const res = await api.get<ConversionRatio>('/portal/reports/conversion-ratio')
   return res.data
@@ -304,8 +306,7 @@ export async function getReconciliation(
   return res.data
 }
 
-// ── Admin Users ────────────────────────────────────────────────
-
+//  Admin Users 
 export async function getAdminUsers(): Promise<AdminUserRow[]> {
   const res = await api.get<{ users: AdminUserRow[] }>('/admin/users')
   return res.data.users || []

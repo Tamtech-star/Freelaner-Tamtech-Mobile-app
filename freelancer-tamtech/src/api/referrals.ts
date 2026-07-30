@@ -7,6 +7,8 @@ export interface ReferralPayload {
   customer_phone: string;
   customer_id_number?: string;
   bike_model?: string;
+  payment_mode?: string;
+  quantity?: number;
   referral_code?: string;
 }
 
