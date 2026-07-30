@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native"
 import { router } from "expo-router"
+import { BarChart3, Building2, Handshake } from "lucide-react-native"
 import { getAllSales, getConvertedSales } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
@@ -86,7 +87,7 @@ export default function SalesDashboardScreen() {
           activeOpacity={0.7}
         >
           <View style={s.cardIconWrap}>
-            <Text style={s.cardIcon}>📊</Text>
+            <BarChart3 size={24} color="#3b82f6" />
           </View>
           <View style={s.cardContent}>
             <Text style={s.cardValue}>{fmt(totalCount)}</Text>
@@ -102,7 +103,7 @@ export default function SalesDashboardScreen() {
           activeOpacity={0.7}
         >
           <View style={s.cardIconWrap}>
-            <Text style={s.cardIcon}>🏢</Text>
+            <Building2 size={24} color="#10b981" />
           </View>
           <View style={s.cardContent}>
             <Text style={s.cardValue}>{fmt(directCount)}</Text>
@@ -118,7 +119,7 @@ export default function SalesDashboardScreen() {
           activeOpacity={0.7}
         >
           <View style={s.cardIconWrap}>
-            <Text style={s.cardIcon}>🤝</Text>
+            <Handshake size={24} color="#f59e0b" />
           </View>
           <View style={s.cardContent}>
             <Text style={s.cardValue}>{fmt(freelancerCount)}</Text>
@@ -168,7 +169,6 @@ const s = StyleSheet.create({
     justifyContent: "center",
     marginRight: 14,
   },
-  cardIcon: { fontSize: 22 },
   cardContent: { flex: 1 },
   cardValue: { fontSize: 22, fontWeight: "800", color: "#1e293b" },
   cardLabel: { fontSize: 14, fontWeight: "700", color: "#0f172a", marginTop: 2 },
