@@ -73,7 +73,7 @@ export default function LoginScreen() {
           <Text style={styles.brandTag}>TAMTECH TOOLS</Text>
           <Text style={styles.brandTitle}>Freelancer Portal</Text>
           <Text style={styles.brandSubtitle}>
-            Sign in as admin, sales agent or freelancer
+            Sign in to access your metrics
           </Text>
         </View>
 
