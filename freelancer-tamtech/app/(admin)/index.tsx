@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from "react-native"
 import { router } from "expo-router"
+import { Search, BarChart3, Wallet, Users, ShieldUser } from "lucide-react-native"
 import { useAuthStore } from "../../src/store/authStore"
 import { getAdminDashboard } from "../../src/api/admin"
 import type { AdminMetrics } from "../../src/api/admin"
@@ -107,7 +108,9 @@ export default function AdminDashboardScreen() {
             style={[s.actionCard]}
             onPress={() => router.push("/(admin)/review")}
           >
-            <Text style={s.actionIcon}>🔍</Text>
+            <View style={s.actionIconWrap}>
+              <Search size={22} color="#2563eb" />
+            </View>
             <Text style={s.actionTitle}>Review Queue</Text>
             <Text style={s.actionDesc}>Approve payments, duplicates & conversions</Text>
           </TouchableOpacity>
@@ -116,7 +119,9 @@ export default function AdminDashboardScreen() {
             style={[s.actionCard]}
             onPress={() => router.push("/(admin)/reports")}
           >
-            <Text style={s.actionIcon}>📊</Text>
+            <View style={s.actionIconWrap}>
+              <BarChart3 size={22} color="#2563eb" />
+            </View>
             <Text style={s.actionTitle}>Reports</Text>
             <Text style={s.actionDesc}>Conversion rates, county analytics & reconciliation</Text>
           </TouchableOpacity>
@@ -125,7 +130,9 @@ export default function AdminDashboardScreen() {
             style={[s.actionCard]}
             onPress={() => router.push("/(admin)/sales-dashboard")}
           >
-            <Text style={s.actionIcon}>📊</Text>
+            <View style={s.actionIconWrap}>
+              <BarChart3 size={22} color="#2563eb" />
+            </View>
             <Text style={s.actionTitle}>Sales Dashboard</Text>
             <Text style={s.actionDesc}>View total, direct & freelancer sales</Text>
           </TouchableOpacity>
@@ -134,7 +141,9 @@ export default function AdminDashboardScreen() {
             style={[s.actionCard]}
             onPress={() => router.push("/(admin)/paymentrecords")}
           >
-            <Text style={s.actionIcon}>💰</Text>
+            <View style={s.actionIconWrap}>
+              <Wallet size={22} color="#2563eb" />
+            </View>
             <Text style={s.actionTitle}>Payment Records</Text>
             <Text style={s.actionDesc}>Track all commission payments</Text>
           </TouchableOpacity>
@@ -143,7 +152,9 @@ export default function AdminDashboardScreen() {
             style={[s.actionCard]}
             onPress={() => router.push("/(admin)/freelancers")}
           >
-            <Text style={s.actionIcon}>👥</Text>
+            <View style={s.actionIconWrap}>
+              <Users size={22} color="#2563eb" />
+            </View>
             <Text style={s.actionTitle}>Manage Freelancers</Text>
             <Text style={s.actionDesc}>View, search and delete freelancers</Text>
           </TouchableOpacity>
@@ -152,7 +163,9 @@ export default function AdminDashboardScreen() {
             style={[s.actionCard]}
             onPress={() => router.push("/(admin)/users")}
           >
-            <Text style={s.actionIcon}>👤</Text>
+            <View style={s.actionIconWrap}>
+              <ShieldUser size={22} color="#2563eb" />
+            </View>
             <Text style={s.actionTitle}>Admin Users</Text>
             <Text style={s.actionDesc}>Manage admin accounts</Text>
           </TouchableOpacity>
@@ -255,7 +268,12 @@ const s = StyleSheet.create({
     padding: 16,
     ...SHADOWS.cardSm,
   },
-  actionIcon: { fontSize: 24, marginBottom: 8 },
+ actionIconWrap: { 
+    marginBottom: 8, 
+    justifyContent: "center", 
+    alignItems: "center",
+    alignSelf: "flex-start" 
+  },
   actionTitle: { fontSize: 15, fontWeight: "700", color: "#1e293b" },
   actionDesc: { marginTop: 2, fontSize: 12, color: "#64748b", lineHeight: 16 },
 
