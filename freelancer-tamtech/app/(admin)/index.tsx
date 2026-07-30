@@ -123,11 +123,11 @@ export default function AdminDashboardScreen() {
 
           <TouchableOpacity
             style={[s.actionCard]}
-            onPress={() => router.push("/(admin)/convertedsales")}
+            onPress={() => router.push("/(admin)/sales-dashboard")}
           >
-            <Text style={s.actionIcon}>🔄</Text>
-            <Text style={s.actionTitle}>Converted Sales</Text>
-            <Text style={s.actionDesc}>View all converted freelancer leads</Text>
+            <Text style={s.actionIcon}>📊</Text>
+            <Text style={s.actionTitle}>Sales Dashboard</Text>
+            <Text style={s.actionDesc}>View total, direct & freelancer sales</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

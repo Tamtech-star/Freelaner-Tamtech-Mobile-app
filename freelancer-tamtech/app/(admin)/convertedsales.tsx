@@ -37,7 +37,8 @@ export default function ConvertedSalesScreen() {
     try {
       setError(null)
       const data = await getConvertedSales()
-      setSales(data)
+      // Filter locally to only freelancer_lead — backend may return other types
+      setSales(data.filter((s) => s.submission_type === "freelancer_lead"))
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || "Failed to load converted sales.")
     } finally {

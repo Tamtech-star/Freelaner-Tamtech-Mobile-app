@@ -29,7 +29,10 @@ export default function SalesDashboardScreen() {
       ])
       setTotalCount(all.length)
       setDirectCount(all.filter((s) => s.submission_type === "direct_sale").length)
-      setFreelancerCount(converted.length)
+      // Only count freelancer_lead submissions — backend may return other types like "trek"
+      setFreelancerCount(
+        converted.filter((s) => s.submission_type === "freelancer_lead").length
+      )
     } catch {
       // counts will remain null, handled in UI
     } finally {
