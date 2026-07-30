@@ -196,7 +196,7 @@ export default function AdminDashboardScreen() {
                 label="Converted Sales"
                 value={metrics.converted_sales}
                 color="#f59e0b"
-                onPress={() => router.push("/(admin)/convertedsales")}
+                onPress={() => router.push("/(admin)/sales-dashboard")}
               />
 
               {/* ── COMMENTED OUT (not required visually) ──
