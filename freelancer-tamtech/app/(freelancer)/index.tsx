@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { ClipboardList, Wallet, FileText, CheckCircle, Clock, CreditCard, XCircle, Check } from "lucide-react-native";
 import { useAuthStore } from "../../src/store/authStore";
 import { COLORS, SHADOWS } from "../../src/constants/config";
 import {
@@ -70,11 +71,13 @@ type DashboardTab = "cards" | "workflow";
 // Constants
 
 const BIKE_MODELS = ["EKON450M1V2", "EKON450M2V2"];
+
+// Replaced emojis with Lucide Icons
 const WORKFLOW_STEPS = [
-  { stage: 1, label: "Lead Creation", icon: "📋" },
-  { stage: 2, label: "Sale Conversion", icon: "💰" },
-  { stage: 3, label: "Commission Claim", icon: "📄" },
-  { stage: 4, label: "Payment Acknowledged", icon: "✅" },
+  { stage: 1, label: "Lead Creation", icon: ClipboardList },
+  { stage: 2, label: "Sale Conversion", icon: Wallet },
+  { stage: 3, label: "Commission Claim", icon: FileText },
+  { stage: 4, label: "Payment Acknowledged", icon: CheckCircle },
 ];
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -205,7 +208,7 @@ function LeadDetailCard({ lead, onBack, onProceedToSaleConversion }: { lead: Lea
             <Text style={ldS.hint}>Submit sale confirmation for this lead</Text>
           </>
         )}
-        {effectiveStatus === "under_review" && <StatusBox icon="⏳" title="Sale Pending Approval" text="Sale is confirmed successfully! Waiting for admin approval." color="amber" />}
+        {effectiveStatus === "under_review" && <StatusBox icon={Clock} title="Sale Pending Approval" text="Sale is confirmed successfully! Waiting for admin approval." color="amber" />}
         {(effectiveStatus === "converted_to_sale" || effectiveStatus === "submitted") && (
           <>
             <TouchableOpacity onPress={() => onProceedToSaleConversion(lead)} style={s.submitBtn}>
@@ -214,7 +217,7 @@ function LeadDetailCard({ lead, onBack, onProceedToSaleConversion }: { lead: Lea
             <Text style={ldS.hint}>Sale approved! Submit your commission claim for this lead</Text>
           </>
         )}
-        {(effectiveStatus === "payment_processing" || effectiveStatus === "pending_admin") && <StatusBox icon="💳" title="Payment Processing" text="Your commission claim has been received. Awaiting payment from admin." color="cyan" />}
+        {(effectiveStatus === "payment_processing" || effectiveStatus === "pending_admin") && <StatusBox icon={CreditCard} title="Payment Processing" text="Your commission claim has been received. Awaiting payment from admin." color="cyan" />}
         {effectiveStatus === "paid" && (
           <>
             <TouchableOpacity onPress={() => onProceedToSaleConversion(lead)} style={s.submitBtn}>
@@ -223,14 +226,15 @@ function LeadDetailCard({ lead, onBack, onProceedToSaleConversion }: { lead: Lea
             <Text style={ldS.hint}>Confirm you have received the commission payment</Text>
           </>
         )}
-        {effectiveStatus === "rejected" && <StatusBox icon="✗" title="Sale Rejected" text="This sale was not approved. Please contact admin." color="red" />}
-        {(effectiveStatus === "closed" || effectiveStatus === "acknowledged") && <StatusBox icon="✅" title="Lead Closed" text="This lead has been fully completed and closed." color="slate" />}
+        {effectiveStatus === "rejected" && <StatusBox icon={XCircle} title="Sale Rejected" text="This sale was not approved. Please contact admin." color="red" />}
+        {(effectiveStatus === "closed" || effectiveStatus === "acknowledged") && <StatusBox icon={CheckCircle} title="Lead Closed" text="This lead has been fully completed and closed." color="slate" />}
       </View>
     </View>
   );
 }
 
-function StatusBox({ icon, title, text, color }: { icon: string; title: string; text: string; color: string }) {
+// Updated to use Icon Components instead of text emojis
+function StatusBox({ icon: Icon, title, text, color }: { icon: any; title: string; text: string; color: string }) {
   const colors: Record<string, { border: string; bg: string; heading: string; body: string }> = {
     amber: { border: "#fcd34d", bg: "#fffbeb", heading: "#92400e", body: "#92400e" },
     cyan: { border: "#67e8f9", bg: "#ecfeff", heading: "#0e7490", body: "#0e7490" },
@@ -240,7 +244,10 @@ function StatusBox({ icon, title, text, color }: { icon: string; title: string; 
   const c = colors[color];
   return (
     <View style={[sbS.box, { borderColor: c.border, backgroundColor: c.bg }]}>
-      <Text style={[sbS.title, { color: c.heading }]}>{icon} {title}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+         <Icon size={18} color={c.heading} />
+         <Text style={[sbS.title, { color: c.heading }]}>{title}</Text>
+      </View>
       <Text style={[sbS.text, { color: c.body }]}>{text}</Text>
     </View>
   );
@@ -534,15 +541,16 @@ export default function FreelancerDashboard() {
         {/*  TAB: WORKFLOW  */}
         {activeTab === "workflow" && (
           <View style={s.workflowSection}>
-            {/* Stepper */}
+            {/* Stepper with Lucide Icons */}
             <View style={s.stepper}>
               {WORKFLOW_STEPS.map((step,idx) => {
                 const isActive = step.stage===workflowStage;
                 const isComplete = step.stage<workflowStage;
+                const IconComponent = step.icon;
                 return (
                   <View key={step.stage} style={s.stepWrap}>
                     <TouchableOpacity onPress={()=>setWorkflowStage(step.stage)} style={[s.stepCircle, isActive&&{backgroundColor:"#3b4aff"}, isComplete&&{backgroundColor:"#10b981"}, !isActive&&!isComplete&&{backgroundColor:"#e2e8f0"}]}>
-                      <Text style={[s.stepCircleText,(isActive||isComplete)&&{color:"#fff"}]}>{isComplete?"✓":step.icon}</Text>
+                      {isComplete ? <Check size={20} color="#fff" /> : <IconComponent size={20} color={isActive ? "#fff" : "#94a3b8"} />}
                     </TouchableOpacity>
                     <Text style={[s.stepLabel,isActive&&{color:"#3b4aff",fontWeight:"700"}]}>{step.label}</Text>
                     {idx<3 && <View style={[s.stepLine,isComplete&&{backgroundColor:"#10b981"}]} />}
@@ -557,7 +565,7 @@ export default function FreelancerDashboard() {
             {/* STAGE 1: LEAD CREATION */}
             {workflowStage===1 && (
               <View style={s.stageCard}>
-                <Text style={s.stageTitle}>📋 Step 1: Lead Creation</Text>
+                <Text style={s.stageTitle}>Step 1: Lead Creation</Text>
                 <Text style={s.stageDesc}>Submit a new customer lead.</Text>
                 <View style={s.formGrid}>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer Full Name *</Text><TextInput style={s.input} value={leadForm.customerFullName} onChangeText={v=>setLeadForm(p=>({...p,customerFullName:v}))} placeholder="Customer Full Name *" placeholderTextColor="#94a3b8" /></View>
@@ -586,7 +594,7 @@ export default function FreelancerDashboard() {
               <View style={s.stageCard}>
                 {convSuccess ? (
                   <View style={s.successScreen}>
-                    <View style={s.successCircle}><Text style={s.successCircleText}>✓</Text></View>
+                    <View style={s.successCircle}><Check size={32} color="#059669" /></View>
                     <Text style={s.successTitle}>Sale Confirmed and Submitted!</Text>
                     <Text style={s.successDesc}>Your sale for <Text style={{fontWeight:"700"}}>{conversionLead?.customer_full_name||"Customer"}</Text> has been submitted and is pending Admin Approval.</Text>
                     <StatusBadge status="under_review" />
@@ -595,7 +603,7 @@ export default function FreelancerDashboard() {
                   </View>
                 ) : (
                   <>
-                    <Text style={s.stageTitle}> Step 2: Sale Conversion</Text>
+                    <Text style={s.stageTitle}>Step 2: Sale Conversion</Text>
                     <Text style={s.stageDesc}>{conversionLead?`Confirm the sale for ${conversionLead.customer_full_name} (Lead: ${conversionLead.lead_code})`:"Confirm a sale by entering transaction verification details."}</Text>
                     {conversionLead && (
                       <View style={s.contextBox}>
@@ -639,7 +647,7 @@ export default function FreelancerDashboard() {
             {/* STAGE 3: COMMISSION CLAIM */}
             {workflowStage===3 && (
               <View style={s.stageCard}>
-                <Text style={s.stageTitle}> Step 3: Commission Claim</Text>
+                <Text style={s.stageTitle}>Step 3: Commission Claim</Text>
                 <Text style={s.stageDesc}>Generate and download your commission invoice, then submit your claim.</Text>
                 <View style={s.invoiceBox}>
                   <Text style={s.invoiceBoxTitle}>Your Commission Invoice</Text>
@@ -651,12 +659,18 @@ export default function FreelancerDashboard() {
                   </View>
                   {claimSubmitted ? (
                     <>
-                      <View style={s.claimPendingBox}><Text style={s.claimPendingTitle}>⏳ Commission Request Submitted</Text><Text style={s.claimPendingText}>Your commission request is under payment processing by the admin. You will receive a message once it is executed.</Text></View>
+                      <View style={s.claimPendingBox}>
+                        <View style={{flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8}}>
+                          <Clock size={20} color="#155e75" />
+                          <Text style={s.claimPendingTitle}>Commission Request Submitted</Text>
+                        </View>
+                        <Text style={s.claimPendingText}>Your commission request is under payment processing by the admin. You will receive a message once it is executed.</Text>
+                      </View>
                       <TouchableOpacity onPress={()=>{setActiveTab("cards");setLeadView("VIEW_SUMMARY");setClaimSubmitted(false);}} style={s.submitBtn}><Text style={s.submitBtnText}>Go to Dashboard →</Text></TouchableOpacity>
                     </>
                   ) : (
                     <>
-                      <TouchableOpacity onPress={handleClaimCommission} disabled={claimDownloading} style={[s.submitBtn,{marginTop:12},claimDownloading&&{opacity:.5}]}><Text style={s.submitBtnText}>{claimDownloading?"Processing...":"📄 Download Commission Invoice (PDF)"}</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={handleClaimCommission} disabled={claimDownloading} style={[s.submitBtn,{marginTop:12},claimDownloading&&{opacity:.5}]}><Text style={s.submitBtnText}>{claimDownloading?"Processing...":"Download Commission Invoice (PDF)"}</Text></TouchableOpacity>
                       <Text style={s.claimHint}>Download the invoice PDF and review before submitting your claim</Text>
                     </>
                   )}
@@ -669,15 +683,15 @@ export default function FreelancerDashboard() {
               <View style={s.stageCard}>
                 {paymentDone ? (
                   <View style={s.successScreen}>
-                    <View style={s.successCircle}><Text style={s.successCircleText}>✅</Text></View>
+                    <View style={s.successCircle}><CheckCircle size={32} color="#059669" /></View>
                     <Text style={s.successTitle}>Payment Acknowledged Successfully</Text>
                     <Text style={s.successDesc}>Your payment has been acknowledged. Download your receipt below.</Text>
-                    {paymentSubCode && <TouchableOpacity onPress={handleDownloadReceipt} style={[s.receiptBtn,{marginTop:16}]}><Text style={s.receiptBtnText}>📄 Download Receipt PDF ({paymentSubCode})</Text></TouchableOpacity>}
+                    {paymentSubCode && <TouchableOpacity onPress={handleDownloadReceipt} style={[s.receiptBtn,{marginTop:16}]}><Text style={s.receiptBtnText}>Download Receipt PDF ({paymentSubCode})</Text></TouchableOpacity>}
                     <TouchableOpacity onPress={()=>{setPaymentDone(false);setActiveTab("cards");setLeadView("VIEW_SUMMARY");}} style={[s.submitBtn,{marginTop:12}]}><Text style={s.submitBtnText}>Go to Dashboard →</Text></TouchableOpacity>
                   </View>
                 ) : (
                   <>
-                    <Text style={s.stageTitle}>✅ Step 4: Payment Acknowledged</Text>
+                    <Text style={s.stageTitle}>Step 4: Payment Acknowledged</Text>
                     <Text style={s.stageDesc}>Confirm you have received the commission payment.</Text>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Payment Code *</Text><TextInput style={s.input} value={paymentCode} onChangeText={setPaymentCode} placeholder="Payment code" placeholderTextColor="#94a3b8" autoCapitalize="characters" /></View>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Receipt URL (optional)</Text><TextInput style={s.input} value={paymentReceiptUrl} onChangeText={setPaymentReceiptUrl} placeholder="Receipt URL (optional)" placeholderTextColor="#94a3b8" /></View>
@@ -750,7 +764,6 @@ const s = StyleSheet.create({
   stepper: { flexDirection:"row", alignItems:"flex-start", marginBottom:20 },
   stepWrap: { flex:1, alignItems:"center", position:"relative" },
   stepCircle: { width:40, height:40, borderRadius:20, alignItems:"center", justifyContent:"center" },
-  stepCircleText: { fontSize:16, color:"#94a3b8" },
   stepLabel: { fontSize:9, fontWeight:"600", color:"#64748b", marginTop:4, textAlign:"center", textTransform:"uppercase" },
   stepLine: { position:"absolute", top:20, right:-4, width:8, height:2, backgroundColor:"#e2e8f0" },
   stageCard: { backgroundColor:"#fff", borderWidth:1, borderColor:"#e2e8f0", borderRadius:16, padding:20 },
@@ -773,7 +786,6 @@ const s = StyleSheet.create({
   removeFile: { fontSize:12, fontWeight:"600", color:"#dc2626" },
   successScreen: { alignItems:"center", paddingVertical:20 },
   successCircle: { width:64, height:64, borderRadius:32, backgroundColor:"#d1fae5", alignItems:"center", justifyContent:"center", marginBottom:12 },
-  successCircleText: { fontSize:28, color:"#059669" },
   successTitle: { fontSize:18, fontWeight:"700", color:"#0f172a", marginBottom:8, textAlign:"center" },
   successDesc: { fontSize:13, color:"#475569", textAlign:"center", lineHeight:20, marginBottom:8 },
   successSubtext: { fontSize:11, color:"#94a3b8", textAlign:"center", marginTop:8 },
