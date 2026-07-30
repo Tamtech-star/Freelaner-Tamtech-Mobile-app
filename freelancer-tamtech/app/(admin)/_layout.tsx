@@ -13,6 +13,8 @@ export default function AdminLayout() {
       <Stack.Screen name="reports" />
       <Stack.Screen name="freelancers" />
       <Stack.Screen name="leads" />
+      <Stack.Screen name="sales-dashboard" />
+      <Stack.Screen name="sales-list" />
       <Stack.Screen name="convertedsales" />
       <Stack.Screen name="paymentrecords" />
       <Stack.Screen name="users" />
