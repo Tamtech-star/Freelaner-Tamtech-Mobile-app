@@ -23,7 +23,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.tamtechtools.freelancerapp"
+      "package": "com.tamtechtools.freelancerapp",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,7 +41,21 @@
           "cameraPermission": "Freelancer-Tamtech needs access to your camera to capture documents."
         }
       ],
-      "expo-font"
-    ]
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "-keep public class com.reactnativecommunity.picker.** { *; }\n-dontwarn com.reactnativecommunity.picker.**"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4869a5ef-d2ac-448e-a417-3cc5bfa3350b"
+      }
+    }
   }
 }
