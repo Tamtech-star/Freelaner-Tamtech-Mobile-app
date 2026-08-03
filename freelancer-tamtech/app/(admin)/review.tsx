@@ -193,11 +193,11 @@ export default function ReviewQueueScreen() {
       onPress={() => setActiveTab(tab)}
     >
       <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>{label}</Text>
-      {count > 0 && (
+      {count > 0 ? (
         <View style={[s.badge, activeTab === tab && s.badgeActive]}>
           <Text style={[s.badgeText, activeTab === tab && s.badgeTextActive]}>{count}</Text>
         </View>
-      )}
+      ) : null}
     </TouchableOpacity>
   )
 
@@ -224,30 +224,29 @@ export default function ReviewQueueScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Tab bar */}
         <View style={s.tabRow}>
           <TabBtn tab="payments" label="Payments" count={pendingPayments.length} />
           <TabBtn tab="duplicates" label="Duplicates" count={duplicates.length} />
           <TabBtn tab="conversions" label="Conversions" count={conversions.length} />
         </View>
 
-        {loading && (
+        {loading ? (
           <View style={s.centerWrap}>
             <ActivityIndicator size="large" color={BRAND_BLUE} />
           </View>
-        )}
+        ) : null}
 
-        {error && (
+        {!!error ? (
           <View style={s.errorWrap}>
             <Text style={s.errorText}>{error}</Text>
             <TouchableOpacity onPress={load} style={s.retryBtn}>
               <Text style={s.retryBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
 
         {/* Payments Tab */}
-        {activeTab === "payments" && !loading && (
+        {activeTab === "payments" && !loading ? (
           <>
             {pendingPayments.length === 0 ? (
               <Text style={s.emptyText}>No pending commission claims.</Text>
@@ -310,10 +309,10 @@ export default function ReviewQueueScreen() {
               ))
             )}
           </>
-        )}
+        ) : null}
 
         {/* Duplicates Tab */}
-        {activeTab === "duplicates" && !loading && (
+        {activeTab === "duplicates" && !loading ? (
           <>
             {duplicates.length === 0 ? (
               <Text style={s.emptyText}>No pending duplicate reviews.</Text>
@@ -357,10 +356,10 @@ export default function ReviewQueueScreen() {
               ))
             )}
           </>
-        )}
+        ) : null}
 
         {/* Conversions Tab */}
-        {activeTab === "conversions" && !loading && (
+        {activeTab === "conversions" && !loading ? (
           <>
             {conversions.length === 0 ? (
               <Text style={s.emptyText}>No pending conversion reviews.</Text>
@@ -383,18 +382,22 @@ export default function ReviewQueueScreen() {
               ))
             )}
           </>
-        )}
+        ) : null}
       </ScrollView>
 
       {/* Payment Processing Modal */}
       <Modal visible={!!activePayment} animationType="slide" transparent>
         <View style={s.modalOverlay}>
-          <ScrollView style={s.modalCard}>
+          <ScrollView 
+            style={s.modalCard}
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled={true}
+          >
             <Text style={s.modalTitle}>Process Payment</Text>
             <Text style={s.modalSub}>{activePayment?.invoice_code}</Text>
 
             <Text style={s.fieldLabel}>Payment Mode</Text>
-            <View style={[s.pickerWrap, { zIndex: 1000 }]}>
+            <View style={{ zIndex: 1000, marginBottom: 12 }}>
               <DropDownPicker
                 open={paymentModeOpen}
                 value={paymentForm.paymentMode}
@@ -409,21 +412,11 @@ export default function ReviewQueueScreen() {
                 style={s.dropdown}
                 dropDownContainerStyle={s.dropdownContainer}
                 listMode="SCROLLVIEW"
+                scrollViewProps={{ nestedScrollEnabled: true }}
                 zIndex={1000}
                 zIndexInverse={1000}
               />
             </View>
-
-            {/* ── TRANSACTION REFERENCE — commented out in mobile ──
-            <Text style={s.fieldLabel}>Transaction Reference *</Text>
-            <TextInput
-              style={s.input}
-              value={paymentForm.transactionReference}
-              onChangeText={(v) => setPaymentForm({ ...paymentForm, transactionReference: v })}
-              placeholder="e.g. MPESA-TX123"
-              placeholderTextColor="#94a3b8"
-            />
-            */}
 
             <Text style={s.fieldLabel}>Amount Paid (KES)</Text>
             <TextInput
@@ -447,7 +440,7 @@ export default function ReviewQueueScreen() {
             />
 
             <TouchableOpacity
-              style={s.approveBtn}
+              style={s.approveBtnModal}
               onPress={handlePaymentApprove}
               disabled={busyId !== null}
             >
@@ -472,6 +465,7 @@ export default function ReviewQueueScreen() {
                 <Text style={s.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
             </View>
+            <View style={{ height: 40 }} />
           </ScrollView>
         </View>
       </Modal>
@@ -483,7 +477,7 @@ export default function ReviewQueueScreen() {
             <Text style={s.modalTitle}>Review Conversion</Text>
             <Text style={s.modalSub}>{activeConversion?.conversionCode}</Text>
 
-            {activeConversion && (
+            {!!activeConversion ? (
               <>
                 <View style={s.detailSection}>
                   <Text style={s.subText}>
@@ -506,7 +500,7 @@ export default function ReviewQueueScreen() {
                   </Text>
                 </View>
 
-                {activeConversion.invoice_photo_url && (
+                {!!activeConversion.invoice_photo_url ? (
                   <TouchableOpacity
                     style={s.docLink}
                     onPress={() =>
@@ -517,8 +511,9 @@ export default function ReviewQueueScreen() {
                       📎 View Invoice Photo
                     </Text>
                   </TouchableOpacity>
-                )}
-                {activeConversion.sales_agreement_url && (
+                ) : null}
+
+                {!!activeConversion.sales_agreement_url ? (
                   <TouchableOpacity
                     style={s.docLink}
                     onPress={() =>
@@ -529,7 +524,7 @@ export default function ReviewQueueScreen() {
                       📎 View Sales Agreement
                     </Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
 
                 <View style={s.modalActions}>
                   <TouchableOpacity
@@ -552,7 +547,7 @@ export default function ReviewQueueScreen() {
                   </TouchableOpacity>
                 </View>
               </>
-            )}
+            ) : null}
 
             <TouchableOpacity
               style={s.cancelBtn}
@@ -657,6 +652,13 @@ const s = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
+  approveBtnModal: {
+    backgroundColor: "#10b981",
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 20,
+  },
   approveBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   rejectBtn: {
     flex: 1,
@@ -682,6 +684,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 10,
   },
   cancelBtnText: { color: "#334155", fontSize: 13, fontWeight: "600" },
 
@@ -732,17 +735,11 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: "#0f172a",
     backgroundColor: "#fff",
-  },
-  pickerWrap: {
-    borderWidth: 1,
-    borderColor: "#cbd5e1",
-    borderRadius: 8,
-    overflow: "hidden",
-    backgroundColor: "#fff",
     marginBottom: 4,
   },
   dropdown: {
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
     borderRadius: 8,
     height: 46,
     backgroundColor: "#fff",
@@ -753,7 +750,6 @@ const s = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
   },
-  picker: { height: 46 },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 16 },
   detailSection: {
     backgroundColor: "#f8fafc",
