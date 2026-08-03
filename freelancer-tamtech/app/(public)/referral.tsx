@@ -68,6 +68,7 @@ export default function ReferralScreen() {
     setSubmitting(true);
     setError(null);
     try {
+      // 1. Submit the referral
       await submitReferral({
         referrer_name: referrerName.trim(),
         referrer_phone: referrerPhone.trim(),
@@ -78,6 +79,25 @@ export default function ReferralScreen() {
         quantity: parseInt(quantity || "1", 10), 
         referral_code: referralCode.trim() || undefined,
       });
+
+      // 2. Also create an open lead so sales-record can match against it later
+      try {
+        await submitLead({
+          customer_full_name: customerName.trim(),
+          customer_phone: customerPhone.trim(),
+          customer_id_number: customerIdNumber.trim(),
+          bike_model: "", // referral doesn't collect bike model; left blank
+          payment_type: paymentMode || "",
+          quantity_interested: quantity || "1",
+          county: "",
+          location: "",
+          lead_notes: `Referral from ${referrerName.trim()} (${referrerPhone.trim()})`,
+          duplicate_override_reason: "",
+        });
+      } catch {
+        // Lead creation is best-effort; don't fail the whole submission
+      }
+
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || "Submission failed. Please try again.");
