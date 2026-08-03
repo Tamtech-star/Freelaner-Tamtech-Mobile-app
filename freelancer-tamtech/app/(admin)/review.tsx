@@ -52,6 +52,14 @@ export default function ReviewQueueScreen() {
     adminRemarks: "",
   })
 
+  // DropDownPicker state for payment mode
+  const [paymentModeOpen, setPaymentModeOpen] = useState(false)
+  const [paymentModeItems, setPaymentModeItems] = useState([
+    { label: "M-Pesa", value: "M-Pesa" },
+    { label: "Bank Transfer", value: "Bank Transfer" },
+    { label: "Cash", value: "Cash" },
+  ])
+
   // Conversion detail modal
   const [activeConversion, setActiveConversion] = useState<ConversionReviewItem | null>(null)
 
@@ -732,6 +740,18 @@ const s = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#fff",
     marginBottom: 4,
+  },
+  dropdown: {
+    borderWidth: 0,
+    borderRadius: 8,
+    height: 46,
+    backgroundColor: "#fff",
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    backgroundColor: "#fff",
   },
   picker: { height: 46 },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 16 },
