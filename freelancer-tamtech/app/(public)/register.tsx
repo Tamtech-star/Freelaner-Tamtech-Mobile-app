@@ -77,7 +77,6 @@ export default function RegisterScreen() {
   }
 
   const handleSubmit = async () => {
-    // Validate required fields
     const required: [keyof FreelancerRegistrationPayload, string][] = [
       ["fullName", "Full name"],
       ["occupation", "Occupation"],
@@ -123,6 +122,7 @@ export default function RegisterScreen() {
       <ScrollView
         contentContainerStyle={s.scrollContent}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true} 
       >
         {/* Header */}
         <View style={s.headerRow}>
@@ -167,7 +167,7 @@ export default function RegisterScreen() {
           </View>
 
           {/* Age + Sex row */}
-          <View style={s.row}>
+          <View style={[s.row, { zIndex: 3000 }]}>
             <View style={[s.formGroup, { flex: 1 }]}>
               <Text style={s.label}>Age <Text style={s.required}>*</Text></Text>
               <TextInput
@@ -183,50 +183,49 @@ export default function RegisterScreen() {
               />
             </View>
 
-            <View style={[s.formGroup, { flex: 1 }]}>
+            {/* Fixed Sex Dropdown */}
+            <View style={[s.formGroup, { flex: 1, zIndex: 3000 }]}>
               <Text style={s.label}>Sex <Text style={s.required}>*</Text></Text>
-              <View style={[s.pickerWrap, { zIndex: 1000, overflow: 'visible' }]}>
-                <DropDownPicker
-                  open={sexOpen}
-                  value={form.sex}
-                  items={sexItems}
-                  setOpen={setSexOpen}
-                  setValue={(cb) => {
-                    const v = typeof cb === "function" ? cb(form.sex) : cb
-                    updateField("sex", v)
-                  }}
-                  setItems={setSexItems}
-                  style={s.dropdown}
-                  dropDownContainerStyle={s.dropdownContainer}
-                  listMode="SCROLLVIEW"
-                  zIndex={1000}
-                  zIndexInverse={3000}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Occupation */}
-          <View style={s.formGroup}>
-            <Text style={s.label}>Occupation <Text style={s.required}>*</Text></Text>
-            <View style={[s.pickerWrap, { zIndex: 900, overflow: 'visible' }]}>
               <DropDownPicker
-                open={occupationOpen}
-                value={form.occupation}
-                items={occupationItems}
-                setOpen={setOccupationOpen}
+                open={sexOpen}
+                value={form.sex}
+                items={sexItems}
+                setOpen={setSexOpen}
                 setValue={(cb) => {
-                  const v = typeof cb === "function" ? cb(form.occupation) : cb
-                  updateField("occupation", v)
+                  const v = typeof cb === "function" ? cb(form.sex) : cb
+                  updateField("sex", v)
                 }}
-                setItems={setOccupationItems}
+                setItems={setSexItems}
                 style={s.dropdown}
                 dropDownContainerStyle={s.dropdownContainer}
                 listMode="SCROLLVIEW"
-                zIndex={900}
-                zIndexInverse={2000}
+                scrollViewProps={{ nestedScrollEnabled: true }}
+                zIndex={3000}
+                zIndexInverse={1000}
               />
             </View>
+          </View>
+
+          {/* Fixed Occupation Dropdown */}
+          <View style={[s.formGroup, { zIndex: 2000 }]}>
+            <Text style={s.label}>Occupation <Text style={s.required}>*</Text></Text>
+            <DropDownPicker
+              open={occupationOpen}
+              value={form.occupation}
+              items={occupationItems}
+              setOpen={setOccupationOpen}
+              setValue={(cb) => {
+                const v = typeof cb === "function" ? cb(form.occupation) : cb
+                updateField("occupation", v)
+              }}
+              setItems={setOccupationItems}
+              style={s.dropdown}
+              dropDownContainerStyle={s.dropdownContainer}
+              listMode="SCROLLVIEW"
+              scrollViewProps={{ nestedScrollEnabled: true }}
+              zIndex={2000}
+              zIndexInverse={2000}
+            />
           </View>
 
           {/* M-Pesa Phone */}
@@ -292,27 +291,26 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {/* County */}
+          {/* Fixed County Dropdown - Using MODAL for massive list */}
           <View style={s.formGroup}>
             <Text style={s.label}>County <Text style={s.required}>*</Text></Text>
-            <View style={[s.pickerWrap, { zIndex: 800, overflow: 'visible' }]}>
-              <DropDownPicker
-                open={countyOpen}
-                value={form.county}
-                items={countyItems}
-                setOpen={setCountyOpen}
-                setValue={(cb) => {
-                  const v = typeof cb === "function" ? cb(form.county) : cb
-                  updateField("county", v)
-                }}
-                setItems={setCountyItems}
-                style={s.dropdown}
-                dropDownContainerStyle={s.dropdownContainer}
-                listMode="SCROLLVIEW"
-                zIndex={800}
-                zIndexInverse={1000}
-              />
-            </View>
+            <DropDownPicker
+              open={countyOpen}
+              value={form.county}
+              items={countyItems}
+              setOpen={setCountyOpen}
+              setValue={(cb) => {
+                const v = typeof cb === "function" ? cb(form.county) : cb
+                updateField("county", v)
+              }}
+              setItems={setCountyItems}
+              style={s.dropdown}
+              listMode="MODAL"
+              modalProps={{ animationType: "slide" }}
+              modalTitle="Select your County"
+              searchable={true}
+              searchPlaceholder="Search county..."
+            />
           </View>
 
           {/* Address */}
@@ -410,15 +408,9 @@ const s = StyleSheet.create({
 
   row: { flexDirection: "row", gap: 12 },
 
-  pickerWrap: {
+  dropdown: {
     borderWidth: 1,
     borderColor: COLORS.inputBorder,
-    borderRadius: 8,
-    overflow: "visible",
-    backgroundColor: COLORS.inputBg,
-  },
-  dropdown: {
-    borderWidth: 0,
     borderRadius: 8,
     height: 46,
     backgroundColor: COLORS.inputBg,
@@ -429,7 +421,6 @@ const s = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: COLORS.inputBg,
   },
-  picker: { height: 46 },
 
   successBanner: {
     marginTop: 16,
