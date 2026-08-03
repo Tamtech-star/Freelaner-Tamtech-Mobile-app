@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { Picker } from "@react-native-picker/picker";
+import DropDownPicker from "react-native-dropdown-picker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { ClipboardList, Wallet, FileText, CheckCircle, Clock, CreditCard, XCircle, Check } from "lucide-react-native";
@@ -72,7 +72,6 @@ type DashboardTab = "cards" | "workflow";
 
 const BIKE_MODELS = ["EKON450M1V2", "EKON450M2V2"];
 
-// Replaced emojis with Lucide Icons
 const WORKFLOW_STEPS = [
   { stage: 1, label: "Lead Creation", icon: ClipboardList },
   { stage: 2, label: "Sale Conversion", icon: Wallet },
@@ -233,7 +232,6 @@ function LeadDetailCard({ lead, onBack, onProceedToSaleConversion }: { lead: Lea
   );
 }
 
-// Updated to use Icon Components instead of text emojis
 function StatusBox({ icon: Icon, title, text, color }: { icon: any; title: string; text: string; color: string }) {
   const colors: Record<string, { border: string; bg: string; heading: string; body: string }> = {
     amber: { border: "#fcd34d", bg: "#fffbeb", heading: "#92400e", body: "#92400e" },
@@ -276,7 +274,6 @@ const ldS = StyleSheet.create({
 
 export default function FreelancerDashboard() {
   const { user, logout } = useAuthStore();
-  // sessionCode = user.code from auth store (no manual input needed)
   const sessionCode = user?.code || "";
   const [codeInput, setCodeInput] = useState(user?.code || "");
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
@@ -295,17 +292,33 @@ export default function FreelancerDashboard() {
   const [wfError, setWfError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Dropdown UI States
+  const [leadBikeOpen, setLeadBikeOpen] = useState(false);
+  const [leadPaymentOpen, setLeadPaymentOpen] = useState(false);
+  const [convBikeOpen, setConvBikeOpen] = useState(false);
+
+  const [bikeItems, setBikeItems] = useState(
+    BIKE_MODELS.map((model) => ({ label: model, value: model }))
+  );
+  const [paymentItems, setPaymentItems] = useState([
+    { label: "Cash", value: "cash" },
+    { label: "Loan", value: "loan" },
+  ]);
+
   // Lead form
   const [leadForm, setLeadForm] = useState({ customerFullName: "", customerIdNumber: "", customerPhone: "", bikeModel: "", paymentType: "", quantityInterested: "1", residenceLocation: "", county: "", leadNotes: "", duplicateOverrideReason: "" });
+  
   // Conversion form
   const [convForm, setConvForm] = useState({ bikeModel: "", quantity: "1", saleDate: todayStr(), invoiceNumber: "" });
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [invoicePhoto, setInvoicePhoto] = useState<{ uri: string; name: string } | null>(null);
   const [salesAgreementPhoto, setSalesAgreementPhoto] = useState<{ uri: string; name: string } | null>(null);
   const [convSuccess, setConvSuccess] = useState(false);
+  
   // Commission
   const [claimSubmitted, setClaimSubmitted] = useState(false);
   const [claimDownloading, setClaimDownloading] = useState(false);
+  
   // Payment
   const [paymentCode, setPaymentCode] = useState("");
   const [paymentReceiptUrl, setPaymentReceiptUrl] = useState("");
@@ -360,7 +373,7 @@ export default function FreelancerDashboard() {
         residenceLocation:leadForm.residenceLocation,county:leadForm.county,leadNotes:leadForm.leadNotes,
         duplicateOverrideReason:leadForm.duplicateOverrideReason,freelancerCode:sessionCode,
       };
-      const result = await submitLead(payload);
+      await submitLead(payload);
       setWfMessage(`Lead created for ${leadForm.customerFullName}!`);
       setLeadForm({ customerFullName:"",customerIdNumber:"",customerPhone:"",bikeModel:"",paymentType:"",quantityInterested:"1",residenceLocation:"",county:"",leadNotes:"",duplicateOverrideReason:"" });
       loadDashboard(sessionCode, true);
@@ -385,7 +398,7 @@ export default function FreelancerDashboard() {
       const invRes = await fetch(invoicePhoto.uri); const invBlob = await invRes.blob();
       fd.append("invoicePhoto",invBlob,invoicePhoto.name);
       if (salesAgreementPhoto) { const saRes = await fetch(salesAgreementPhoto.uri); const saBlob = await saRes.blob(); fd.append("salesAgreementPhoto",saBlob,salesAgreementPhoto.name); }
-      const result = await submitConversion(fd);
+      await submitConversion(fd);
       setConvSuccess(true);
       setConvForm({ bikeModel:"",quantity:"1",saleDate:todayStr(),invoiceNumber:"" });
       setInvoicePhoto(null); setSalesAgreementPhoto(null);
@@ -413,7 +426,7 @@ export default function FreelancerDashboard() {
     setWfSubmitting(true); setWfError(null);
     const code = paymentCode.trim().toUpperCase();
     try {
-      const result = await acknowledgePayment({ paymentCode:code,receiptUrl:paymentReceiptUrl,notes:paymentNotes });
+      await acknowledgePayment({ paymentCode:code,receiptUrl:paymentReceiptUrl,notes:paymentNotes });
       setPaymentDone(true); setPaymentSubCode(code);
       loadDashboard(sessionCode,true);
     } catch (err:any) { setWfError(err.message); }
@@ -426,7 +439,6 @@ export default function FreelancerDashboard() {
     catch {}
   };
 
-  // Auto-load dashboard when sessionCode is available (from auth store)
   useEffect(() => {
     if (sessionCode && !dashboard && !dashLoading) {
       loadDashboard(sessionCode);
@@ -441,7 +453,13 @@ export default function FreelancerDashboard() {
 
   return (
     <View style={s.container}>
-      <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom:50 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(sessionCode,true).finally(()=>setRefreshing(false)); }} tintColor={COLORS.gradientStart} />}>
+      <ScrollView 
+        style={s.scroll} 
+        contentContainerStyle={{ paddingBottom:50 }}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(sessionCode,true).finally(()=>setRefreshing(false)); }} tintColor={COLORS.gradientStart} />}
+      >
         {/* Header */}
         <View style={s.header}>
           <View style={s.headerLeft}>
@@ -571,12 +589,47 @@ export default function FreelancerDashboard() {
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer Full Name *</Text><TextInput style={s.input} value={leadForm.customerFullName} onChangeText={v=>setLeadForm(p=>({...p,customerFullName:v}))} placeholder="Customer Full Name *" placeholderTextColor="#94a3b8" /></View>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer ID Number / KRA PIN *</Text><TextInput style={s.input} value={leadForm.customerIdNumber} onChangeText={v=>setLeadForm(p=>({...p,customerIdNumber:v}))} placeholder="Customer ID Number / KRA PIN *" placeholderTextColor="#94a3b8" /></View>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer Phone *</Text><TextInput style={s.input} value={leadForm.customerPhone} onChangeText={v=>setLeadForm(p=>({...p,customerPhone:v}))} placeholder="Customer Phone *" placeholderTextColor="#94a3b8" keyboardType="phone-pad" /></View>
-                  <View style={s.fieldGroup}><Text style={s.fieldLabel}>Bike Model *</Text>
-                    <View style={s.pickerWrap}><Picker selectedValue={leadForm.bikeModel} onValueChange={v=>setLeadForm(p=>({...p,bikeModel:v}))} style={s.picker}><Picker.Item label="Bike Model *" value="" />{BIKE_MODELS.map(m=><Picker.Item key={m} label={m} value={m} />)}</Picker></View>
+                  
+                  {/* Dropped Picker for DropDownPicker */}
+                  <View style={[s.fieldGroup, { zIndex: 3000 }]}>
+                    <Text style={s.fieldLabel}>Bike Model *</Text>
+                    <DropDownPicker
+                      open={leadBikeOpen}
+                      value={leadForm.bikeModel || null}
+                      items={bikeItems}
+                      setOpen={setLeadBikeOpen}
+                      setValue={(val: any) => setLeadForm(p => ({ ...p, bikeModel: typeof val === 'function' ? val(p.bikeModel) : val }))}
+                      setItems={setBikeItems}
+                      placeholder="Select Bike Model *"
+                      style={s.dropdown}
+                      textStyle={s.dropdownText}
+                      dropDownContainerStyle={s.dropdownContainer}
+                      zIndex={3000}
+                      zIndexInverse={1000}
+                      listMode="SCROLLVIEW"
+                    />
                   </View>
-                  <View style={s.fieldGroup}><Text style={s.fieldLabel}>Payment Type *</Text>
-                    <View style={s.pickerWrap}><Picker selectedValue={leadForm.paymentType} onValueChange={v=>setLeadForm(p=>({...p,paymentType:v}))} style={s.picker}><Picker.Item label="Payment Type *" value="" /><Picker.Item label="Cash" value="cash" /><Picker.Item label="Loan" value="loan" /></Picker></View>
+
+                  {/* Dropped Picker for DropDownPicker */}
+                  <View style={[s.fieldGroup, { zIndex: 2000 }]}>
+                    <Text style={s.fieldLabel}>Payment Type *</Text>
+                    <DropDownPicker
+                      open={leadPaymentOpen}
+                      value={leadForm.paymentType || null}
+                      items={paymentItems}
+                      setOpen={setLeadPaymentOpen}
+                      setValue={(val: any) => setLeadForm(p => ({ ...p, paymentType: typeof val === 'function' ? val(p.paymentType) : val }))}
+                      setItems={setPaymentItems}
+                      placeholder="Select Payment Type *"
+                      style={s.dropdown}
+                      textStyle={s.dropdownText}
+                      dropDownContainerStyle={s.dropdownContainer}
+                      zIndex={2000}
+                      zIndexInverse={2000}
+                      listMode="SCROLLVIEW"
+                    />
                   </View>
+
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Quantity *</Text><TextInput style={s.input} value={leadForm.quantityInterested} onChangeText={v=>setLeadForm(p=>({...p,quantityInterested:v.replace(/[^0-9]/g,"")}))} placeholder="1" placeholderTextColor="#94a3b8" keyboardType="number-pad" /></View>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Residence Location (optional)</Text><TextInput style={s.input} value={leadForm.residenceLocation} onChangeText={v=>setLeadForm(p=>({...p,residenceLocation:v}))} placeholder="Residence Location (optional)" placeholderTextColor="#94a3b8" /></View>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>County (optional)</Text><TextInput style={s.input} value={leadForm.county} onChangeText={v=>setLeadForm(p=>({...p,county:v}))} placeholder="County (optional)" placeholderTextColor="#94a3b8" /></View>
@@ -616,15 +669,31 @@ export default function FreelancerDashboard() {
                         </View>
                       </View>
                     )}
-                    <View style={s.formGrid}>
-                      <View style={s.fieldGroup}><Text style={s.fieldLabel}>Bike Model *</Text>
-                        <View style={s.pickerWrap}><Picker selectedValue={convForm.bikeModel} onValueChange={v=>setConvForm(p=>({...p,bikeModel:v}))} style={s.picker}><Picker.Item label="Select bike model" value="" />{BIKE_MODELS.map(m=><Picker.Item key={m} label={m} value={m} />)}</Picker></View>
+                    <View style={[s.formGrid, { zIndex: 3000 }]}>
+                      {/* Dropped Picker for DropDownPicker */}
+                      <View style={[s.fieldGroup, { zIndex: 3000 }]}>
+                        <Text style={s.fieldLabel}>Bike Model *</Text>
+                        <DropDownPicker
+                          open={convBikeOpen}
+                          value={convForm.bikeModel || null}
+                          items={bikeItems}
+                          setOpen={setConvBikeOpen}
+                          setValue={(val: any) => setConvForm(p => ({ ...p, bikeModel: typeof val === 'function' ? val(p.bikeModel) : val }))}
+                          setItems={setBikeItems}
+                          placeholder="Select bike model *"
+                          style={s.dropdown}
+                          textStyle={s.dropdownText}
+                          dropDownContainerStyle={s.dropdownContainer}
+                          zIndex={3000}
+                          zIndexInverse={1000}
+                          listMode="SCROLLVIEW"
+                        />
                       </View>
                       <View style={s.fieldGroup}><Text style={s.fieldLabel}>Quantity *</Text><TextInput style={s.input} value={convForm.quantity} onChangeText={v=>setConvForm(p=>({...p,quantity:v.replace(/[^0-9]/g,"")}))} placeholder="1" placeholderTextColor="#94a3b8" keyboardType="number-pad" /></View>
                       <View style={s.fieldGroup}><Text style={s.fieldLabel}>Sale Date *</Text><TextInput style={s.input} value={convForm.saleDate} onChangeText={v=>setConvForm(p=>({...p,saleDate:v}))} placeholder="YYYY-MM-DD" placeholderTextColor="#94a3b8" /></View>
                       <View style={s.fieldGroup}><Text style={s.fieldLabel}>Sales Invoice Number *</Text><TextInput style={s.input} value={convForm.invoiceNumber} onChangeText={v=>{setConvForm(p=>({...p,invoiceNumber:v}));if(v&&!validateInvoice(v))setInvoiceError("Format: INV- followed by numbers (e.g. INV-200)");else setInvoiceError(null);}} placeholder="INV-200" placeholderTextColor="#94a3b8" autoCapitalize="characters" />{invoiceError?<Text style={s.inlineError}>{invoiceError}</Text>:<Text style={s.hint}>Format: INV- followed by numbers (e.g. INV-200)</Text>}</View>
                     </View>
-                    <View style={s.formGrid}>
+                    <View style={[s.formGrid, { marginTop: 14 }]}>
                       <View style={s.fieldGroup}><Text style={s.fieldLabel}>Invoice Photo *</Text>
                         {invoicePhoto?<View style={s.fileAttached}><Text style={s.fileName} numberOfLines={1}>{invoicePhoto.name}</Text><TouchableOpacity onPress={()=>setInvoicePhoto(null)}><Text style={s.removeFile}>Remove</Text></TouchableOpacity></View>
                         :<TouchableOpacity onPress={async()=>{const r=await ImagePicker.launchImageLibraryAsync({mediaTypes:["images"],quality:.8});if(!r.canceled&&r.assets?.[0])setInvoicePhoto({uri:r.assets[0].uri,name:r.assets[0].fileName||"invoice.jpg"});}} style={s.filePickerBtn}><Text style={s.filePickerText}>Tap to upload Invoice Photo *</Text></TouchableOpacity>}
@@ -773,8 +842,9 @@ const s = StyleSheet.create({
   fieldGroup: { marginBottom:4 },
   fieldLabel: { fontSize:11, fontWeight:"600", color:"#475569", marginBottom:6 },
   input: { borderWidth:1, borderColor:"#cbd5e1", borderRadius:8, paddingHorizontal:12, paddingVertical:10, fontSize:14, color:"#0f172a", backgroundColor:"#fff" },
-  pickerWrap: { borderWidth:1, borderColor:"#cbd5e1", borderRadius:8, overflow:"hidden", backgroundColor:"#fff" },
-  picker: { height:48 },
+  dropdown: { borderColor: "#cbd5e1", borderRadius: 8, height: 48, backgroundColor: "#fff" },
+  dropdownText: { fontSize: 14, color: "#0f172a" },
+  dropdownContainer: { borderColor: "#cbd5e1", backgroundColor: "#fff" },
   hint: { fontSize:10, color:"#94a3b8", marginTop:2 },
   inlineError: { fontSize:10, color:"#dc2626", marginTop:2 },
   submitBtn: { marginTop:16, backgroundColor:COLORS.gradientStart, paddingVertical:14, borderRadius:12, alignItems:"center" },

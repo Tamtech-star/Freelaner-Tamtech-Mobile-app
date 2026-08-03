@@ -348,15 +348,23 @@ export default function SalesRecordForm() {
           <Text style={s.fieldLabel}>
             Customer Type <Text style={s.required}>*</Text>
           </Text>
-          <View style={s.pickerWrap}>
-            <Picker
-              selectedValue={form.customerType}
-              onValueChange={(v) => updateField("customerType", v)}
-              style={s.picker}
-            >
-              <Picker.Item label="Individual" value="individual" />
-              <Picker.Item label="Company" value="company" />
-            </Picker>
+          <View style={[s.pickerWrap, { zIndex: 6000, overflow: 'visible' }]}>
+            <DropDownPicker
+              open={customerTypeOpen}
+              value={form.customerType}
+              items={customerTypeItems}
+              setOpen={setCustomerTypeOpen}
+              setValue={(cb) => {
+                const v = typeof cb === "function" ? cb(form.customerType) : cb
+                updateField("customerType", v)
+              }}
+              setItems={setCustomerTypeItems}
+              style={s.dropdown}
+              dropDownContainerStyle={s.dropdownContainer}
+              listMode="SCROLLVIEW"
+              zIndex={6000}
+              zIndexInverse={7000}
+            />
           </View>
 
           <View style={s.grid2}>
@@ -368,7 +376,7 @@ export default function SalesRecordForm() {
                 style={s.input}
                 value={form.customerFullName}
                 onChangeText={(v) => updateField("customerFullName", v)}
-                placeholder="John Doe"
+                placeholder="John Kamau"
                 placeholderTextColor="#94a3b8"
               />
             </View>
@@ -455,17 +463,23 @@ export default function SalesRecordForm() {
               <Text style={s.fieldLabel}>
                 Make / Model <Text style={s.required}>*</Text>
               </Text>
-              <View style={s.pickerWrap}>
-                <Picker
-                  selectedValue={form.bikeModel}
-                  onValueChange={(v) => updateField("bikeModel", v)}
-                  style={s.picker}
-                >
-                  <Picker.Item label="Select model..." value="" />
-                  {BIKE_MODELS.map((m) => (
-                    <Picker.Item key={m} label={m} value={m} />
-                  ))}
-                </Picker>
+              <View style={[s.pickerWrap, { zIndex: 5000, overflow: 'visible' }]}>
+                <DropDownPicker
+                  open={bikeModelOpen}
+                  value={form.bikeModel}
+                  items={bikeModelItems}
+                  setOpen={setBikeModelOpen}
+                  setValue={(cb) => {
+                    const v = typeof cb === "function" ? cb(form.bikeModel) : cb
+                    updateField("bikeModel", v)
+                  }}
+                  setItems={setBikeModelItems}
+                  style={s.dropdown}
+                  dropDownContainerStyle={s.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={5000}
+                  zIndexInverse={6000}
+                />
               </View>
             </View>
 
@@ -501,15 +515,23 @@ export default function SalesRecordForm() {
               <Text style={s.fieldLabel}>
                 Payment Type <Text style={s.required}>*</Text>
               </Text>
-              <View style={s.pickerWrap}>
-                <Picker
-                  selectedValue={form.paymentType}
-                  onValueChange={(v) => updateField("paymentType", v)}
-                  style={s.picker}
-                >
-                  <Picker.Item label="Cash" value="cash" />
-                  <Picker.Item label="Loan" value="loan" />
-                </Picker>
+              <View style={[s.pickerWrap, { zIndex: 4000, overflow: 'visible' }]}>
+                <DropDownPicker
+                  open={paymentTypeOpen}
+                  value={form.paymentType}
+                  items={paymentTypeItems}
+                  setOpen={setPaymentTypeOpen}
+                  setValue={(cb) => {
+                    const v = typeof cb === "function" ? cb(form.paymentType) : cb
+                    updateField("paymentType", v)
+                  }}
+                  setItems={setPaymentTypeItems}
+                  style={s.dropdown}
+                  dropDownContainerStyle={s.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={4000}
+                  zIndexInverse={5000}
+                />
               </View>
             </View>
 
@@ -526,46 +548,67 @@ export default function SalesRecordForm() {
 
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>Bike Color</Text>
-              <View style={s.pickerWrap}>
-                <Picker
-                  selectedValue={form.bikeColor}
-                  onValueChange={(v) => updateField("bikeColor", v)}
-                  style={s.picker}
-                >
-                  {COLORS_LIST.map((c) => (
-                    <Picker.Item key={c || "blank"} label={c || "Select color..."} value={c} />
-                  ))}
-                </Picker>
+              <View style={[s.pickerWrap, { zIndex: 3000, overflow: 'visible' }]}>
+                <DropDownPicker
+                  open={bikeColorOpen}
+                  value={form.bikeColor}
+                  items={bikeColorItems}
+                  setOpen={setBikeColorOpen}
+                  setValue={(cb) => {
+                    const v = typeof cb === "function" ? cb(form.bikeColor) : cb
+                    updateField("bikeColor", v)
+                  }}
+                  setItems={setBikeColorItems}
+                  style={s.dropdown}
+                  dropDownContainerStyle={s.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={3000}
+                  zIndexInverse={4000}
+                />
               </View>
             </View>
 
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>Insurance</Text>
-              <View style={s.pickerWrap}>
-                <Picker
-                  selectedValue={form.hasInsurance}
-                  onValueChange={(v) => updateField("hasInsurance", v)}
-                  style={s.picker}
-                >
-                  {INSURANCE_OPTIONS.map((o) => (
-                    <Picker.Item key={o} label={o} value={o} />
-                  ))}
-                </Picker>
+              <View style={[s.pickerWrap, { zIndex: 2000, overflow: 'visible' }]}>
+                <DropDownPicker
+                  open={hasInsuranceOpen}
+                  value={form.hasInsurance}
+                  items={hasInsuranceItems}
+                  setOpen={setHasInsuranceOpen}
+                  setValue={(cb) => {
+                    const v = typeof cb === "function" ? cb(form.hasInsurance) : cb
+                    updateField("hasInsurance", v)
+                  }}
+                  setItems={setHasInsuranceItems}
+                  style={s.dropdown}
+                  dropDownContainerStyle={s.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={2000}
+                  zIndexInverse={3000}
+                />
               </View>
             </View>
 
             <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>Tracker</Text>
-              <View style={s.pickerWrap}>
-                <Picker
-                  selectedValue={form.hasTracker}
-                  onValueChange={(v) => updateField("hasTracker", v)}
-                  style={s.picker}
-                >
-                  {TRACKER_OPTIONS.map((o) => (
-                    <Picker.Item key={o} label={o} value={o} />
-                  ))}
-                </Picker>
+              <View style={[s.pickerWrap, { zIndex: 1000, overflow: 'visible' }]}>
+                <DropDownPicker
+                  open={hasTrackerOpen}
+                  value={form.hasTracker}
+                  items={hasTrackerItems}
+                  setOpen={setHasTrackerOpen}
+                  setValue={(cb) => {
+                    const v = typeof cb === "function" ? cb(form.hasTracker) : cb
+                    updateField("hasTracker", v)
+                  }}
+                  setItems={setHasTrackerItems}
+                  style={s.dropdown}
+                  dropDownContainerStyle={s.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={1000}
+                  zIndexInverse={1000}
+                />
               </View>
             </View>
 
@@ -877,7 +920,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#cbd5e1",
     borderRadius: 8,
-    overflow: "hidden",
+    overflow: "visible",
+    backgroundColor: "#fff",
+  },
+  dropdown: {
+    borderWidth: 0,
+    borderRadius: 8,
+    height: 48,
+    backgroundColor: "#fff",
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
     backgroundColor: "#fff",
   },
   picker: { height: 48 },
