@@ -1,11 +1,10 @@
-import { useState, useRef, useCallback } from "react"
+import { useState, useCallback } from "react"
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Switch,
   Alert,
   ActivityIndicator,
   StyleSheet,
@@ -153,29 +152,65 @@ export default function SalesRecordForm() {
     []
   )
 
-  //  Pick file 
-  const pickFile = useCallback(async (fieldKey: string) => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images", "livePhotos"],
-        allowsMultipleSelection: false,
-        quality: 0.8,
-      })
+  //  Process Asset Helper
+  const saveAsset = (fieldKey: string, asset: ImagePicker.ImagePickerAsset) => {
+    setFiles((prev) => ({
+      ...prev,
+      [fieldKey]: {
+        uri: asset.uri,
+        name: asset.fileName || `${fieldKey}.jpg`,
+        type: asset.mimeType || "image/jpeg",
+      },
+    }))
+  }
 
-      if (!result.canceled && result.assets?.[0]) {
-        const asset = result.assets[0]
-        setFiles((prev) => ({
-          ...prev,
-          [fieldKey]: {
-            uri: asset.uri,
-            name: asset.fileName || `${fieldKey}.jpg`,
-            type: asset.mimeType || "image/jpeg",
+  //  Pick file (Camera vs Gallery Options)
+  const handleAddFile = useCallback((fieldKey: string) => {
+    Alert.alert(
+      "Upload Document",
+      "Would you like to take a photo or choose from your gallery?",
+      [
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync()
+            if (status !== "granted") {
+              Alert.alert("Permission Denied", "Camera access is required to take photos.")
+              return
+            }
+            try {
+              const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ["images", "livePhotos"] as any,
+                quality: 0.8,
+              })
+              if (!result.canceled && result.assets?.[0]) {
+                saveAsset(fieldKey, result.assets[0])
+              }
+            } catch {
+              Alert.alert("Error", "Failed to open camera.")
+            }
           },
-        }))
-      }
-    } catch {
-      Alert.alert("Error", "Failed to pick file.")
-    }
+        },
+        {
+          text: "Choose from Gallery",
+          onPress: async () => {
+            try {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images", "livePhotos"] as any,
+                allowsMultipleSelection: false,
+                quality: 0.8,
+              })
+              if (!result.canceled && result.assets?.[0]) {
+                saveAsset(fieldKey, result.assets[0])
+              }
+            } catch {
+              Alert.alert("Error", "Failed to pick file from gallery.")
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    )
   }, [])
 
   //  Remove file 
@@ -262,7 +297,6 @@ export default function SalesRecordForm() {
       for (const field of DOCUMENT_FIELDS) {
         const file = files[field.key]
         if (file) {
-          // For React Native, append as blob
           const response = await fetch(file.uri)
           const blob = await response.blob()
           formData.append(field.key, blob, file.name)
@@ -309,7 +343,7 @@ export default function SalesRecordForm() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity onPress={() => pickFile(field.key)} style={s.filePickerBtn}>
+          <TouchableOpacity onPress={() => handleAddFile(field.key)} style={s.filePickerBtn}>
             <Text style={s.filePickerText}>Tap to upload {field.label}</Text>
           </TouchableOpacity>
         )}
@@ -331,6 +365,7 @@ export default function SalesRecordForm() {
         style={s.scroll}
         contentContainerStyle={{ paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
       >
         {/* Agent Name (read-only) */}
         <View style={s.section}>
@@ -341,14 +376,14 @@ export default function SalesRecordForm() {
         </View>
 
         {/* Customer Information Section */}
-        <View style={s.section}>
+        <View style={[s.section, { zIndex: 6000 }]}>
           <Text style={s.sectionTitle}>Customer Information</Text>
 
           {/* Customer Type */}
-          <Text style={s.fieldLabel}>
-            Customer Type <Text style={s.required}>*</Text>
-          </Text>
-          <View style={[s.pickerWrap, { zIndex: 6000, overflow: 'visible' }]}>
+          <View style={{ zIndex: 6000, marginBottom: 12 }}>
+            <Text style={s.fieldLabel}>
+              Customer Type <Text style={s.required}>*</Text>
+            </Text>
             <DropDownPicker
               open={customerTypeOpen}
               value={form.customerType}
@@ -362,6 +397,7 @@ export default function SalesRecordForm() {
               style={s.dropdown}
               dropDownContainerStyle={s.dropdownContainer}
               listMode="SCROLLVIEW"
+              scrollViewProps={{ nestedScrollEnabled: true }}
               zIndex={6000}
               zIndexInverse={7000}
             />
@@ -456,31 +492,31 @@ export default function SalesRecordForm() {
         </View>
 
         {/* Bike / Sale Details Section */}
-        <View style={s.section}>
+        <View style={[s.section, { zIndex: 5000 }]}>
           <Text style={s.sectionTitle}>Bike / Sale Details</Text>
           <View style={s.grid2}>
-            <View style={s.fieldGroup}>
+            
+            <View style={[s.fieldGroup, { zIndex: 5000 }]}>
               <Text style={s.fieldLabel}>
                 Make / Model <Text style={s.required}>*</Text>
               </Text>
-              <View style={[s.pickerWrap, { zIndex: 5000, overflow: 'visible' }]}>
-                <DropDownPicker
-                  open={bikeModelOpen}
-                  value={form.bikeModel}
-                  items={bikeModelItems}
-                  setOpen={setBikeModelOpen}
-                  setValue={(cb) => {
-                    const v = typeof cb === "function" ? cb(form.bikeModel) : cb
-                    updateField("bikeModel", v)
-                  }}
-                  setItems={setBikeModelItems}
-                  style={s.dropdown}
-                  dropDownContainerStyle={s.dropdownContainer}
-                  listMode="SCROLLVIEW"
-                  zIndex={5000}
-                  zIndexInverse={6000}
-                />
-              </View>
+              <DropDownPicker
+                open={bikeModelOpen}
+                value={form.bikeModel}
+                items={bikeModelItems}
+                setOpen={setBikeModelOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(form.bikeModel) : cb
+                  updateField("bikeModel", v)
+                }}
+                setItems={setBikeModelItems}
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                scrollViewProps={{ nestedScrollEnabled: true }}
+                zIndex={5000}
+                zIndexInverse={6000}
+              />
             </View>
 
             <View style={s.fieldGroup}>
@@ -511,28 +547,27 @@ export default function SalesRecordForm() {
               />
             </View>
 
-            <View style={s.fieldGroup}>
+            <View style={[s.fieldGroup, { zIndex: 4000 }]}>
               <Text style={s.fieldLabel}>
                 Payment Type <Text style={s.required}>*</Text>
               </Text>
-              <View style={[s.pickerWrap, { zIndex: 4000, overflow: 'visible' }]}>
-                <DropDownPicker
-                  open={paymentTypeOpen}
-                  value={form.paymentType}
-                  items={paymentTypeItems}
-                  setOpen={setPaymentTypeOpen}
-                  setValue={(cb) => {
-                    const v = typeof cb === "function" ? cb(form.paymentType) : cb
-                    updateField("paymentType", v)
-                  }}
-                  setItems={setPaymentTypeItems}
-                  style={s.dropdown}
-                  dropDownContainerStyle={s.dropdownContainer}
-                  listMode="SCROLLVIEW"
-                  zIndex={4000}
-                  zIndexInverse={5000}
-                />
-              </View>
+              <DropDownPicker
+                open={paymentTypeOpen}
+                value={form.paymentType}
+                items={paymentTypeItems}
+                setOpen={setPaymentTypeOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(form.paymentType) : cb
+                  updateField("paymentType", v)
+                }}
+                setItems={setPaymentTypeItems}
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                scrollViewProps={{ nestedScrollEnabled: true }}
+                zIndex={4000}
+                zIndexInverse={5000}
+              />
             </View>
 
             <View style={s.fieldGroup}>
@@ -546,70 +581,67 @@ export default function SalesRecordForm() {
               />
             </View>
 
-            <View style={s.fieldGroup}>
+            <View style={[s.fieldGroup, { zIndex: 3000 }]}>
               <Text style={s.fieldLabel}>Bike Color</Text>
-              <View style={[s.pickerWrap, { zIndex: 3000, overflow: 'visible' }]}>
-                <DropDownPicker
-                  open={bikeColorOpen}
-                  value={form.bikeColor}
-                  items={bikeColorItems}
-                  setOpen={setBikeColorOpen}
-                  setValue={(cb) => {
-                    const v = typeof cb === "function" ? cb(form.bikeColor) : cb
-                    updateField("bikeColor", v)
-                  }}
-                  setItems={setBikeColorItems}
-                  style={s.dropdown}
-                  dropDownContainerStyle={s.dropdownContainer}
-                  listMode="SCROLLVIEW"
-                  zIndex={3000}
-                  zIndexInverse={4000}
-                />
-              </View>
+              <DropDownPicker
+                open={bikeColorOpen}
+                value={form.bikeColor}
+                items={bikeColorItems}
+                setOpen={setBikeColorOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(form.bikeColor) : cb
+                  updateField("bikeColor", v)
+                }}
+                setItems={setBikeColorItems}
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                scrollViewProps={{ nestedScrollEnabled: true }}
+                zIndex={3000}
+                zIndexInverse={4000}
+              />
             </View>
 
-            <View style={s.fieldGroup}>
+            <View style={[s.fieldGroup, { zIndex: 2000 }]}>
               <Text style={s.fieldLabel}>Insurance</Text>
-              <View style={[s.pickerWrap, { zIndex: 2000, overflow: 'visible' }]}>
-                <DropDownPicker
-                  open={hasInsuranceOpen}
-                  value={form.hasInsurance}
-                  items={hasInsuranceItems}
-                  setOpen={setHasInsuranceOpen}
-                  setValue={(cb) => {
-                    const v = typeof cb === "function" ? cb(form.hasInsurance) : cb
-                    updateField("hasInsurance", v)
-                  }}
-                  setItems={setHasInsuranceItems}
-                  style={s.dropdown}
-                  dropDownContainerStyle={s.dropdownContainer}
-                  listMode="SCROLLVIEW"
-                  zIndex={2000}
-                  zIndexInverse={3000}
-                />
-              </View>
+              <DropDownPicker
+                open={hasInsuranceOpen}
+                value={form.hasInsurance}
+                items={hasInsuranceItems}
+                setOpen={setHasInsuranceOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(form.hasInsurance) : cb
+                  updateField("hasInsurance", v)
+                }}
+                setItems={setHasInsuranceItems}
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                scrollViewProps={{ nestedScrollEnabled: true }}
+                zIndex={2000}
+                zIndexInverse={3000}
+              />
             </View>
 
-            <View style={s.fieldGroup}>
+            <View style={[s.fieldGroup, { zIndex: 1000 }]}>
               <Text style={s.fieldLabel}>Tracker</Text>
-              <View style={[s.pickerWrap, { zIndex: 1000, overflow: 'visible' }]}>
-                <DropDownPicker
-                  open={hasTrackerOpen}
-                  value={form.hasTracker}
-                  items={hasTrackerItems}
-                  setOpen={setHasTrackerOpen}
-                  setValue={(cb) => {
-                    const v = typeof cb === "function" ? cb(form.hasTracker) : cb
-                    updateField("hasTracker", v)
-                  }}
-                  setItems={setHasTrackerItems}
-                  style={s.dropdown}
-                  dropDownContainerStyle={s.dropdownContainer}
-                  listMode="SCROLLVIEW"
-                  zIndex={1000}
-                  zIndexInverse={1000}
-                />
-              </View>
+              <DropDownPicker
+                open={hasTrackerOpen}
+                value={form.hasTracker}
+                items={hasTrackerItems}
+                setOpen={setHasTrackerOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(form.hasTracker) : cb
+                  updateField("hasTracker", v)
+                }}
+                setItems={setHasTrackerItems}
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                scrollViewProps={{ nestedScrollEnabled: true }}
+                zIndex={1000}
+                zIndexInverse={1000}
+              />
             </View>
 
             <View style={s.fieldGroup}>
@@ -694,16 +726,16 @@ export default function SalesRecordForm() {
         </View>
 
         {/* Success / Error */}
-        {success && (
+        {!!success ? (
           <View style={s.successBanner}>
             <Text style={s.successText}>{success}</Text>
           </View>
-        )}
-        {error && (
+        ) : null}
+        {!!error ? (
           <View style={s.errorBanner}>
             <Text style={s.errorText}>{error}</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Submit Button */}
         <TouchableOpacity onPress={handlePreview} style={s.submitBtn} disabled={submitting}>
@@ -716,16 +748,16 @@ export default function SalesRecordForm() {
       </ScrollView>
 
       {/*  Preview Modal  */}
-      {preview && (
+      {!!preview ? (
         <View style={s.previewOverlay}>
           <ScrollView style={s.previewCard} contentContainerStyle={{ padding: 24 }}>
             <Text style={s.previewTitle}>Preview Direct Sale</Text>
 
-            {error && (
+            {!!error ? (
               <View style={s.errorBanner}>
                 <Text style={s.errorText}>{error}</Text>
               </View>
-            )}
+            ) : null}
 
             {/* Customer Info */}
             <View style={s.previewSection}>
@@ -859,7 +891,7 @@ export default function SalesRecordForm() {
             </Text>
           </ScrollView>
         </View>
-      )}
+      ) : null}
     </View>
   )
 }
@@ -916,15 +948,9 @@ const s = StyleSheet.create({
     color: "#0f172a",
     backgroundColor: "#fff",
   },
-  pickerWrap: {
+  dropdown: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
-    borderRadius: 8,
-    overflow: "visible",
-    backgroundColor: "#fff",
-  },
-  dropdown: {
-    borderWidth: 0,
     borderRadius: 8,
     height: 48,
     backgroundColor: "#fff",
@@ -935,7 +961,6 @@ const s = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#fff",
   },
-  picker: { height: 48 },
 
   hint: { fontSize: 10, color: "#94a3b8", marginTop: 2 },
 
