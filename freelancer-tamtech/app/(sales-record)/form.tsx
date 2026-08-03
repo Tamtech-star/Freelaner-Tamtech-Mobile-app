@@ -265,9 +265,24 @@ export default function SalesRecordForm() {
     setSuccess(null)
 
     try {
+      // Check if an open lead exists for this customer ID
+      let submissionType = "direct_sale"
+      let linkedLeadId: string | undefined
+
+      if (form.customerIdNumber?.trim()) {
+        const lookup = await lookupOpenLeadByCustomerId(form.customerIdNumber.trim())
+        if (lookup.found && lookup.leadId) {
+          submissionType = "freelancer_lead"
+          linkedLeadId = lookup.leadId
+        }
+      }
+
       const formData = new FormData()
-      formData.append("submissionType", "direct_sale")
+      formData.append("submissionType", submissionType)
       formData.append("salesAgentName", user?.name || "internal-staff")
+      if (linkedLeadId) {
+        formData.append("leadId", linkedLeadId)
+      }
 
       // Customer fields
       formData.append("customerType", form.customerType)
