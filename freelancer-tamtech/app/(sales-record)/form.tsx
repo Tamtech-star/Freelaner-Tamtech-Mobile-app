@@ -12,7 +12,7 @@ import {
 } from "react-native"
 import { router } from "expo-router"
 import * as ImagePicker from "expo-image-picker"
-import { Picker } from "@react-native-picker/picker"
+import DropDownPicker from "react-native-dropdown-picker"
 import { useAuthStore } from "../../src/store/authStore"
 import { submitSalesRecord } from "../../src/api/salesRecord"
 import { COLORS, SHADOWS } from "../../src/constants/config"
@@ -110,6 +110,40 @@ export default function SalesRecordForm() {
   const [preview, setPreview] = useState<FormState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  // DropDownPicker state for each picker
+  const [customerTypeOpen, setCustomerTypeOpen] = useState(false)
+  const [customerTypeItems, setCustomerTypeItems] = useState([
+    { label: "Individual", value: "individual" },
+    { label: "Company", value: "company" },
+  ])
+
+  const [bikeModelOpen, setBikeModelOpen] = useState(false)
+  const [bikeModelItems, setBikeModelItems] = useState([
+    { label: "Select model...", value: "" },
+    ...BIKE_MODELS.map((m) => ({ label: m, value: m })),
+  ])
+
+  const [paymentTypeOpen, setPaymentTypeOpen] = useState(false)
+  const [paymentTypeItems, setPaymentTypeItems] = useState([
+    { label: "Cash", value: "cash" },
+    { label: "Loan", value: "loan" },
+  ])
+
+  const [bikeColorOpen, setBikeColorOpen] = useState(false)
+  const [bikeColorItems, setBikeColorItems] = useState(
+    COLORS_LIST.map((c) => ({ label: c || "Select color...", value: c }))
+  )
+
+  const [hasInsuranceOpen, setHasInsuranceOpen] = useState(false)
+  const [hasInsuranceItems, setHasInsuranceItems] = useState(
+    INSURANCE_OPTIONS.map((o) => ({ label: o, value: o }))
+  )
+
+  const [hasTrackerOpen, setHasTrackerOpen] = useState(false)
+  const [hasTrackerItems, setHasTrackerItems] = useState(
+    TRACKER_OPTIONS.map((o) => ({ label: o, value: o }))
+  )
 
   // ── Helper to update form field ──
   const updateField = useCallback(

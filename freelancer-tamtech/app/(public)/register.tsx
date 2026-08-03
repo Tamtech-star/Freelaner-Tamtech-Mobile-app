@@ -12,7 +12,7 @@ import {
   ScrollView,
 } from "react-native"
 import { router } from "expo-router"
-import { Picker } from "@react-native-picker/picker"
+import DropDownPicker from "react-native-dropdown-picker"
 import { registerFreelancer, type FreelancerRegistrationPayload } from "../../src/api/auth"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
@@ -45,6 +45,29 @@ export default function RegisterScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // DropDownPicker states
+  const [sexOpen, setSexOpen] = useState(false)
+  const [sexItems, setSexItems] = useState([
+    { label: "Male", value: "male" },
+    { label: "Female", value: "female" },
+    { label: "Other", value: "other" },
+    { label: "Prefer not to say", value: "prefer_not_to_say" },
+  ])
+
+  const [occupationOpen, setOccupationOpen] = useState(false)
+  const [occupationItems, setOccupationItems] = useState([
+    { label: "Select occupation...", value: "" },
+    { label: "Employed", value: "employed" },
+    { label: "Self-Employed", value: "self_employed" },
+    { label: "Student", value: "student" },
+    { label: "Others", value: "others" },
+  ])
+
+  const [countyOpen, setCountyOpen] = useState(false)
+  const [countyItems, setCountyItems] = useState(
+    KENYAN_COUNTIES.map((c) => ({ label: c, value: c }))
+  )
 
   const updateField = <K extends keyof FreelancerRegistrationPayload>(
     key: K,
@@ -162,17 +185,23 @@ export default function RegisterScreen() {
 
             <View style={[s.formGroup, { flex: 1 }]}>
               <Text style={s.label}>Sex <Text style={s.required}>*</Text></Text>
-              <View style={s.pickerWrap}>
-                <Picker
-                  selectedValue={form.sex}
-                  onValueChange={(v) => updateField("sex", v)}
-                  style={s.picker}
-                >
-                  <Picker.Item label="Male" value="male" />
-                  <Picker.Item label="Female" value="female" />
-                  <Picker.Item label="Other" value="other" />
-                  <Picker.Item label="Prefer not to say" value="prefer_not_to_say" />
-                </Picker>
+              <View style={[s.pickerWrap, { zIndex: 1000, overflow: 'visible' }]}>
+                <DropDownPicker
+                  open={sexOpen}
+                  value={form.sex}
+                  items={sexItems}
+                  setOpen={setSexOpen}
+                  setValue={(cb) => {
+                    const v = typeof cb === "function" ? cb(form.sex) : cb
+                    updateField("sex", v)
+                  }}
+                  setItems={setSexItems}
+                  style={s.dropdown}
+                  dropDownContainerStyle={s.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={1000}
+                  zIndexInverse={3000}
+                />
               </View>
             </View>
           </View>
@@ -180,18 +209,23 @@ export default function RegisterScreen() {
           {/* Occupation */}
           <View style={s.formGroup}>
             <Text style={s.label}>Occupation <Text style={s.required}>*</Text></Text>
-            <View style={s.pickerWrap}>
-              <Picker
-                selectedValue={form.occupation}
-                onValueChange={(v) => updateField("occupation", v)}
-                style={s.picker}
-              >
-                <Picker.Item label="Select occupation..." value="" />
-                <Picker.Item label="Employed" value="employed" />
-                <Picker.Item label="Self-Employed" value="self_employed" />
-                <Picker.Item label="Student" value="student" />
-                <Picker.Item label="Others" value="others" />
-              </Picker>
+            <View style={[s.pickerWrap, { zIndex: 900, overflow: 'visible' }]}>
+              <DropDownPicker
+                open={occupationOpen}
+                value={form.occupation}
+                items={occupationItems}
+                setOpen={setOccupationOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(form.occupation) : cb
+                  updateField("occupation", v)
+                }}
+                setItems={setOccupationItems}
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                zIndex={900}
+                zIndexInverse={2000}
+              />
             </View>
           </View>
 
@@ -261,16 +295,23 @@ export default function RegisterScreen() {
           {/* County */}
           <View style={s.formGroup}>
             <Text style={s.label}>County <Text style={s.required}>*</Text></Text>
-            <View style={s.pickerWrap}>
-              <Picker
-                selectedValue={form.county}
-                onValueChange={(v) => updateField("county", v)}
-                style={s.picker}
-              >
-                {KENYAN_COUNTIES.map((c) => (
-                  <Picker.Item key={c} label={c} value={c} />
-                ))}
-              </Picker>
+            <View style={[s.pickerWrap, { zIndex: 800, overflow: 'visible' }]}>
+              <DropDownPicker
+                open={countyOpen}
+                value={form.county}
+                items={countyItems}
+                setOpen={setCountyOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(form.county) : cb
+                  updateField("county", v)
+                }}
+                setItems={setCountyItems}
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                zIndex={800}
+                zIndexInverse={1000}
+              />
             </View>
           </View>
 
@@ -373,7 +414,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.inputBorder,
     borderRadius: 8,
-    overflow: "hidden",
+    overflow: "visible",
+    backgroundColor: COLORS.inputBg,
+  },
+  dropdown: {
+    borderWidth: 0,
+    borderRadius: 8,
+    height: 46,
+    backgroundColor: COLORS.inputBg,
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 8,
     backgroundColor: COLORS.inputBg,
   },
   picker: { height: 46 },
