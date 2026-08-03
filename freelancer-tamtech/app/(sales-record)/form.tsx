@@ -330,7 +330,18 @@ export default function SalesRecordForm() {
         throw new Error(result.error || "Submission failed.")
       }
 
-      setSuccess(`Sale recorded successfully! Code: ${result.conversionCode}`)
+      // If this was a freelancer lead, auto-trigger commission
+      let commissionTriggered = false
+      if (linkedLeadId && result.conversionCode) {
+        try {
+          await autoSubmitCommission(linkedLeadId)
+          commissionTriggered = true
+        } catch {
+          // Commission triggering is best-effort; don't fail the whole submission
+        }
+      }
+
+      setSuccess(`Sale recorded successfully! Code: ${result.conversionCode}${commissionTriggered ? " Commission auto-requested." : ""}`)
       setPreview(null)
       setForm(INITIAL_FORM)
       setFiles({})
