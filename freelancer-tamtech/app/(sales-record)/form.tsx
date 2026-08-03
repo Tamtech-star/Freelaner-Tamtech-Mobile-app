@@ -14,6 +14,7 @@ import * as ImagePicker from "expo-image-picker"
 import DropDownPicker from "react-native-dropdown-picker"
 import { useAuthStore } from "../../src/store/authStore"
 import { submitSalesRecord } from "../../src/api/salesRecord"
+import { lookupOpenLeadByCustomerId, autoSubmitCommission } from "../../src/api/portal"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 //  Constants 
