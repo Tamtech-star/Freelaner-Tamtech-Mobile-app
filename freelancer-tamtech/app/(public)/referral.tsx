@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
-import { Picker } from "@react-native-picker/picker";
+import DropDownPicker from "react-native-dropdown-picker";
 import { submitReferral } from "../../src/api/referrals";
 import { COLORS, SHADOWS } from "../../src/constants/config";
 
@@ -29,6 +29,14 @@ export default function ReferralScreen() {
   
   // Added Quantity state (defaults to "1")
   const [quantity, setQuantity] = useState("1");
+
+  // DropDownPicker state
+  const [paymentModeOpen, setPaymentModeOpen] = useState(false);
+  const [paymentModeItems, setPaymentModeItems] = useState([
+    { label: "Cash", value: "cash" },
+    { label: "Hire Purchase", value: "hire_purchase" },
+    { label: "Loan", value: "loan" },
+  ]);
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -217,15 +225,20 @@ export default function ReferralScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Payment Mode Interested *</Text>
             <View style={styles.pickerWrap}>
-              <Picker
-                selectedValue={paymentMode}
-                onValueChange={(v) => setPaymentMode(v)}
-                style={styles.picker}
-              >
-                <Picker.Item label="Select payment mode" value="" />
-                <Picker.Item label="Loan" value="Loan" />
-                <Picker.Item label="Cash" value="Cash" />
-              </Picker>
+              <DropDownPicker
+                open={paymentModeOpen}
+                value={paymentMode}
+                items={paymentModeItems}
+                setOpen={setPaymentModeOpen}
+                setValue={setPaymentMode}
+                setItems={setPaymentModeItems}
+                placeholder="Select payment mode"
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                listMode="SCROLLVIEW"
+                zIndex={1000}
+                zIndexInverse={1000}
+              />
             </View>
           </View>
 
@@ -348,6 +361,19 @@ const styles = StyleSheet.create({
     borderColor: COLORS.inputBorder,
     borderRadius: 8,
     overflow: "hidden",
+    backgroundColor: COLORS.inputBg,
+    zIndex: 1000,
+  },
+  dropdown: {
+    borderWidth: 0,
+    borderRadius: 8,
+    height: 48,
+    backgroundColor: COLORS.inputBg,
+  },
+  dropdownContainer: {
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 8,
     backgroundColor: COLORS.inputBg,
   },
   picker: {
