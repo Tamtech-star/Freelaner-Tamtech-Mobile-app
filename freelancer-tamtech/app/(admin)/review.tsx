@@ -12,7 +12,7 @@ import {
   StyleSheet,
   Linking,
 } from "react-native"
-import { Picker } from "@react-native-picker/picker"
+import DropDownPicker from "react-native-dropdown-picker"
 import { router } from "expo-router"
 import {
   getReviewDuplicates,
@@ -386,18 +386,24 @@ export default function ReviewQueueScreen() {
             <Text style={s.modalSub}>{activePayment?.invoice_code}</Text>
 
             <Text style={s.fieldLabel}>Payment Mode</Text>
-            <View style={s.pickerWrap}>
-              <Picker
-                selectedValue={paymentForm.paymentMode}
-                onValueChange={(v) =>
+            <View style={[s.pickerWrap, { zIndex: 1000 }]}>
+              <DropDownPicker
+                open={paymentModeOpen}
+                value={paymentForm.paymentMode}
+                items={paymentModeItems}
+                setOpen={setPaymentModeOpen}
+                setValue={(cb) => {
+                  const v = typeof cb === "function" ? cb(paymentForm.paymentMode) : cb
                   setPaymentForm({ ...paymentForm, paymentMode: v })
-                }
-                style={s.picker}
-              >
-                <Picker.Item label="M-Pesa" value="M-Pesa" />
-                <Picker.Item label="Bank Transfer" value="Bank Transfer" />
-                <Picker.Item label="Cash" value="Cash" />
-              </Picker>
+                }}
+                setItems={setPaymentModeItems}
+                placeholder="Select payment mode"
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                zIndex={1000}
+                zIndexInverse={1000}
+              />
             </View>
 
             {/* ── TRANSACTION REFERENCE — commented out in mobile ──
