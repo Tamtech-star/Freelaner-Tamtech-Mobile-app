@@ -24,17 +24,13 @@ export default function ReferralScreen() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerIdNumber, setCustomerIdNumber] = useState("");
   
-  // Replaced bikeModel with paymentMode
   const [paymentMode, setPaymentMode] = useState("");
-  
-  // Added Quantity state (defaults to "1")
   const [quantity, setQuantity] = useState("1");
 
-  // DropDownPicker state
+  // DropDownPicker state - Updated to only Cash and Loan
   const [paymentModeOpen, setPaymentModeOpen] = useState(false);
   const [paymentModeItems, setPaymentModeItems] = useState([
     { label: "Cash", value: "cash" },
-    { label: "Hire Purchase", value: "hire_purchase" },
     { label: "Loan", value: "loan" },
   ]);
 
@@ -77,8 +73,8 @@ export default function ReferralScreen() {
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
         customer_id_number: customerIdNumber.trim() || undefined,
-        payment_mode: paymentMode, // Added to payload
-        quantity: parseInt(quantity || "1", 10), // Added to payload
+        payment_mode: paymentMode, 
+        quantity: parseInt(quantity || "1", 10), 
         referral_code: referralCode.trim() || undefined,
       });
       setSuccess(true);
@@ -132,6 +128,7 @@ export default function ReferralScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
       >
         {/* Header */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -187,7 +184,7 @@ export default function ReferralScreen() {
         </View>
 
         {/* Section 2: Customer Information */}
-        <View style={styles.section}>
+        <View style={[styles.section, { zIndex: 2000 }]}>
           <Text style={styles.sectionTitle}>Customer Information</Text>
           <View style={styles.field}>
             <Text style={styles.label}>Customer Name *</Text>
@@ -221,29 +218,27 @@ export default function ReferralScreen() {
             />
           </View>
           
-          {/* New Payment Mode Field */}
-          <View style={styles.field}>
+          {/* Fixed Payment Mode Field with correct Z-Index and layout */}
+          <View style={[styles.field, { zIndex: 2000 }]}>
             <Text style={styles.label}>Payment Mode Interested *</Text>
-            <View style={styles.pickerWrap}>
-              <DropDownPicker
-                open={paymentModeOpen}
-                value={paymentMode}
-                items={paymentModeItems}
-                setOpen={setPaymentModeOpen}
-                setValue={setPaymentMode}
-                setItems={setPaymentModeItems}
-                placeholder="Select payment mode"
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropdownContainer}
-                listMode="SCROLLVIEW"
-                zIndex={1000}
-                zIndexInverse={1000}
-              />
-            </View>
+            <DropDownPicker
+              open={paymentModeOpen}
+              value={paymentMode}
+              items={paymentModeItems}
+              setOpen={setPaymentModeOpen}
+              setValue={setPaymentMode}
+              setItems={setPaymentModeItems}
+              placeholder="Select payment mode"
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              zIndex={2000}
+              zIndexInverse={1000}
+            />
           </View>
 
-          {/* New Quantity Field with Stepper */}
-          <View style={styles.field}>
+          {/* Quantity Field */}
+          <View style={[styles.field, { zIndex: 1000 }]}>
             <Text style={styles.label}>Quantity *</Text>
             <View style={styles.stepperContainer}>
               <TouchableOpacity
@@ -257,7 +252,6 @@ export default function ReferralScreen() {
                 style={styles.stepperInput}
                 value={quantity}
                 onChangeText={(text) => {
-                  // Only allow numeric input
                   const numericText = text.replace(/[^0-9]/g, "");
                   setQuantity(numericText);
                 }}
@@ -356,16 +350,9 @@ const styles = StyleSheet.create({
     color: COLORS.heading,
     backgroundColor: COLORS.inputBg,
   },
-  pickerWrap: {
+  dropdown: {
     borderWidth: 1,
     borderColor: COLORS.inputBorder,
-    borderRadius: 8,
-    overflow: "hidden",
-    backgroundColor: COLORS.inputBg,
-    zIndex: 1000,
-  },
-  dropdown: {
-    borderWidth: 0,
     borderRadius: 8,
     height: 48,
     backgroundColor: COLORS.inputBg,
@@ -376,11 +363,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: COLORS.inputBg,
   },
-  picker: {
-    height: 48,
-  },
   
-  // New Styles for the Quantity Stepper
   stepperContainer: {
     flexDirection: "row",
     alignItems: "center",
