@@ -914,7 +914,9 @@ export default function SalesRecordForm() {
             </View>
 
             <Text style={s.previewNote}>
-              This is a direct sale — no commission will be generated.
+              {form.customerIdNumber
+                ? "If an open lead matches this customer ID, it will be converted to a freelancer lead sale with commission."
+                : "This is a direct sale — no commission will be generated."}
             </Text>
           </ScrollView>
         </View>
@@ -923,7 +925,7 @@ export default function SalesRecordForm() {
   )
 }
 
-// ── Styles ──
+//  Styles 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {

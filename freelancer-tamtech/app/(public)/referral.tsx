@@ -14,6 +14,7 @@ import {
 import { router } from "expo-router";
 import DropDownPicker from "react-native-dropdown-picker";
 import { submitReferral } from "../../src/api/referrals";
+import { submitLead } from "../../src/api/portal";
 import { COLORS, SHADOWS } from "../../src/constants/config";
 
 export default function ReferralScreen() {
