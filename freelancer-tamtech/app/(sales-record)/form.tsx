@@ -14,7 +14,6 @@ import * as ImagePicker from "expo-image-picker"
 import DropDownPicker from "react-native-dropdown-picker"
 import { useAuthStore } from "../../src/store/authStore"
 import { submitSalesRecord } from "../../src/api/salesRecord"
-import { lookupOpenLeadByCustomerId, autoSubmitCommission } from "../../src/api/portal"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 //  Constants 
@@ -265,24 +264,9 @@ export default function SalesRecordForm() {
     setSuccess(null)
 
     try {
-      // Check if an open lead exists for this customer ID
-      let submissionType = "direct_sale"
-      let linkedLeadId: string | undefined
-
-      if (form.customerIdNumber?.trim()) {
-        const lookup = await lookupOpenLeadByCustomerId(form.customerIdNumber.trim())
-        if (lookup.found && lookup.leadId) {
-          submissionType = "freelancer_lead"
-          linkedLeadId = lookup.leadId
-        }
-      }
-
       const formData = new FormData()
-      formData.append("submissionType", submissionType)
+      formData.append("submissionType", "freelancer_lead")
       formData.append("salesAgentName", user?.name || "internal-staff")
-      if (linkedLeadId) {
-        formData.append("leadId", linkedLeadId)
-      }
 
       // Customer fields
       formData.append("customerType", form.customerType)
@@ -319,29 +303,9 @@ export default function SalesRecordForm() {
         }
       }
 
-      const res = await fetch("https://api.spirospares.com/api/sales-record", {
-        method: "POST",
-        body: formData,
-      })
+      const result = await submitSalesRecord(formData)
 
-      const result = await res.json()
-
-      if (!res.ok) {
-        throw new Error(result.error || "Submission failed.")
-      }
-
-      // If this was a freelancer lead, auto-trigger commission
-      let commissionTriggered = false
-      if (linkedLeadId && result.conversionCode) {
-        try {
-          await autoSubmitCommission(linkedLeadId)
-          commissionTriggered = true
-        } catch {
-          // Commission triggering is best-effort; don't fail the whole submission
-        }
-      }
-
-      setSuccess(`Sale recorded successfully! Code: ${result.conversionCode}${commissionTriggered ? " Commission auto-requested." : ""}`)
+      setSuccess(`Sale recorded successfully! Code: ${result.conversionCode}`)
       setPreview(null)
       setForm(INITIAL_FORM)
       setFiles({})

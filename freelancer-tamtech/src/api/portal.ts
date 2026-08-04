@@ -184,19 +184,3 @@ export async function lookupPaymentCode(
   });
   return res.data;
 }
-
-export async function lookupOpenLeadByCustomerId(
-  customerIdNumber: string
-): Promise<{ found: boolean; leadId?: string; leadCode?: string }> {
-  try {
-    const res = await api.post("/portal/leads/lookup-by-customer", {
-      customerIdNumber,
-    });
-    if (res.data?.found) {
-      return { found: true, leadId: res.data.leadId, leadCode: res.data.leadCode };
-    }
-    return { found: false };
-  } catch {
-    return { found: false };
-  }
-}
