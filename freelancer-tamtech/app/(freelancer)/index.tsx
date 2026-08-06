@@ -74,9 +74,9 @@ const BIKE_MODELS = ["EKON450M1V2", "EKON450M2V2"];
 
 const WORKFLOW_STEPS = [
   { stage: 1, label: "Lead Creation", icon: ClipboardList },
-  { stage: 2, label: "Sale Conversion", icon: Wallet },
-  { stage: 3, label: "Commission Claim", icon: FileText },
-  { stage: 4, label: "Payment Acknowledged", icon: CheckCircle },
+  // { stage: 2, label: "Sale Conversion", icon: Wallet },
+  // { stage: 3, label: "Commission Claim", icon: FileText },
+  { stage: 2, label: "Payment Acknowledged", icon: CheckCircle },
 ];
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
