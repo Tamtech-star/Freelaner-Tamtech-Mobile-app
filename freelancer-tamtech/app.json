@@ -54,8 +54,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "4869a5ef-d2ac-448e-a417-3cc5bfa3350b"
+        "projectId": "95ec6e28-67ac-436d-ab5c-54184f859ac2"
       }
-    }
+    },
+    "owner": "tamtech-star"
   }
 }

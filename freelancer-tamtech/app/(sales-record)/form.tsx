@@ -23,6 +23,7 @@ const BIKE_MODELS = [
   "EKON400M2",
   "EKON450M1",
   "VEO",
+  "EKON450M1V3",
   "Other",
 ]
 
@@ -487,7 +488,7 @@ export default function SalesRecordForm() {
           <Text style={s.sectionTitle}>Bike / Sale Details</Text>
           <View style={s.grid2}>
             
-            <View style={[s.fieldGroup, { zIndex: 5000 }]}>
+            <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>
                 Make / Model <Text style={s.required}>*</Text>
               </Text>
@@ -502,11 +503,9 @@ export default function SalesRecordForm() {
                 }}
                 setItems={setBikeModelItems}
                 style={s.dropdown}
-                dropDownContainerStyle={s.dropdownContainer}
-                listMode="SCROLLVIEW"
-                scrollViewProps={{ nestedScrollEnabled: true }}
-                zIndex={5000}
-                zIndexInverse={6000}
+                listMode="MODAL"
+                modalProps={{ animationType: "slide" }}
+                modalTitle="Select Make / Model"
               />
             </View>
 
@@ -572,7 +571,7 @@ export default function SalesRecordForm() {
               />
             </View>
 
-            <View style={[s.fieldGroup, { zIndex: 3000 }]}>
+            <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>Bike Color</Text>
               <DropDownPicker
                 open={bikeColorOpen}
@@ -585,15 +584,13 @@ export default function SalesRecordForm() {
                 }}
                 setItems={setBikeColorItems}
                 style={s.dropdown}
-                dropDownContainerStyle={s.dropdownContainer}
-                listMode="SCROLLVIEW"
-                scrollViewProps={{ nestedScrollEnabled: true }}
-                zIndex={3000}
-                zIndexInverse={4000}
+                listMode="MODAL"
+                modalProps={{ animationType: "slide" }}
+                modalTitle="Select Bike Color"
               />
             </View>
 
-            <View style={[s.fieldGroup, { zIndex: 2000 }]}>
+            <View style={s.fieldGroup}>
               <Text style={s.fieldLabel}>Insurance</Text>
               <DropDownPicker
                 open={hasInsuranceOpen}
@@ -606,11 +603,9 @@ export default function SalesRecordForm() {
                 }}
                 setItems={setHasInsuranceItems}
                 style={s.dropdown}
-                dropDownContainerStyle={s.dropdownContainer}
-                listMode="SCROLLVIEW"
-                scrollViewProps={{ nestedScrollEnabled: true }}
-                zIndex={2000}
-                zIndexInverse={3000}
+                listMode="MODAL"
+                modalProps={{ animationType: "slide" }}
+                modalTitle="Select Insurance"
               />
             </View>
 
