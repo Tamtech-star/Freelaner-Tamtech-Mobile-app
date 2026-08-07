@@ -22,10 +22,7 @@ import {
   getFreelancerDashboard,
   getFreelancerDetails,
   submitLead,
-  submitConversion,
-  autoSubmitCommission,
   acknowledgePayment,
-  downloadCommissionInvoice,
   downloadReceipt,
 } from "../../src/api/portal";
 
@@ -70,12 +67,11 @@ type DashboardTab = "cards" | "workflow";
 
 // Constants
 
-const BIKE_MODELS = ["EKON450M1V2", "EKON450M2V2"];
+const BIKE_MODELS = ["EKON450M1V3", "EKON450M2V2"];
 
+// Reduced to 2 steps
 const WORKFLOW_STEPS = [
   { stage: 1, label: "Lead Creation", icon: ClipboardList },
-  // { stage: 2, label: "Sale Conversion", icon: Wallet },
-  // { stage: 3, label: "Commission Claim", icon: FileText },
   { stage: 2, label: "Payment Acknowledged", icon: CheckCircle },
 ];
 
@@ -121,7 +117,6 @@ function formatDate(d: string) {
   try { return new Date(d).toLocaleDateString("en-KE", { year: "numeric", month: "short", day: "numeric" }); }
   catch { return d; }
 }
-function todayStr() { return new Date().toISOString().split("T")[0]; }
 
 // METRIC CARD
 
@@ -159,7 +154,7 @@ const drS = StyleSheet.create({
   val: { fontSize: 14, fontWeight: "600", color: "#0f172a", marginTop: 2 },
 });
 
-function LeadDetailCard({ lead, onBack, onProceedToSaleConversion }: { lead: LeadCardItem; onBack: () => void; onProceedToSaleConversion: (lead: LeadCardItem) => void }) {
+function LeadDetailCard({ lead, onBack, onProceedToPaymentAck }: { lead: LeadCardItem; onBack: () => void; onProceedToPaymentAck: (lead: LeadCardItem) => void }) {
   const effectiveStatus = lead.invoice_status || lead.lead_status;
   return (
     <View style={[ldS.card, SHADOWS.cardSm]}>
@@ -199,33 +194,23 @@ function LeadDetailCard({ lead, onBack, onProceedToSaleConversion }: { lead: Lea
         </View>
       ) : null}
       <View style={ldS.actions}>
-        {effectiveStatus === "lead_created" && (
-          <>
-            <TouchableOpacity onPress={() => onProceedToSaleConversion(lead)} style={s.submitBtn}>
-              <Text style={s.submitBtnText}>Proceed to Sale Conversion →</Text>
-            </TouchableOpacity>
-            <Text style={ldS.hint}>Submit sale confirmation for this lead</Text>
-          </>
+        {(effectiveStatus === "lead_created" || effectiveStatus === "submitted") && (
+          <StatusBox icon={Clock} title="Lead Submitted" text="Your lead has been submitted and is awaiting processing." color="cyan" />
         )}
-        {effectiveStatus === "under_review" && <StatusBox icon={Clock} title="Sale Pending Approval" text="Sale is confirmed successfully! Waiting for admin approval." color="amber" />}
-        {(effectiveStatus === "converted_to_sale" || effectiveStatus === "submitted") && (
-          <>
-            <TouchableOpacity onPress={() => onProceedToSaleConversion(lead)} style={s.submitBtn}>
-              <Text style={s.submitBtnText}>Proceed to Commission Claim →</Text>
-            </TouchableOpacity>
-            <Text style={ldS.hint}>Sale approved! Submit your commission claim for this lead</Text>
-          </>
-        )}
-        {(effectiveStatus === "payment_processing" || effectiveStatus === "pending_admin") && <StatusBox icon={CreditCard} title="Payment Processing" text="Your commission claim has been received. Awaiting payment from admin." color="cyan" />}
+        {effectiveStatus === "under_review" && <StatusBox icon={Clock} title="Pending Approval" text="Lead is waiting for admin approval." color="amber" />}
+        {effectiveStatus === "converted_to_sale" && <StatusBox icon={Wallet} title="Sale Confirmed" text="Lead converted to sale. Awaiting commission processing." color="cyan" />}
+        {(effectiveStatus === "payment_processing" || effectiveStatus === "pending_admin") && <StatusBox icon={CreditCard} title="Payment Processing" text="Commission is being processed. Awaiting payment from admin." color="cyan" />}
+        
         {effectiveStatus === "paid" && (
           <>
-            <TouchableOpacity onPress={() => onProceedToSaleConversion(lead)} style={s.submitBtn}>
+            <TouchableOpacity onPress={() => onProceedToPaymentAck(lead)} style={s.submitBtn}>
               <Text style={s.submitBtnText}>✓ Proceed to Payment Acknowledgment →</Text>
             </TouchableOpacity>
             <Text style={ldS.hint}>Confirm you have received the commission payment</Text>
           </>
         )}
-        {effectiveStatus === "rejected" && <StatusBox icon={XCircle} title="Sale Rejected" text="This sale was not approved. Please contact admin." color="red" />}
+        
+        {effectiveStatus === "rejected" && <StatusBox icon={XCircle} title="Sale Rejected" text="This lead was not approved. Please contact admin." color="red" />}
         {(effectiveStatus === "closed" || effectiveStatus === "acknowledged") && <StatusBox icon={CheckCircle} title="Lead Closed" text="This lead has been fully completed and closed." color="slate" />}
       </View>
     </View>
@@ -295,7 +280,6 @@ export default function FreelancerDashboard() {
   // Dropdown UI States
   const [leadBikeOpen, setLeadBikeOpen] = useState(false);
   const [leadPaymentOpen, setLeadPaymentOpen] = useState(false);
-  const [convBikeOpen, setConvBikeOpen] = useState(false);
 
   const [bikeItems, setBikeItems] = useState(
     BIKE_MODELS.map((model) => ({ label: model, value: model }))
@@ -307,17 +291,6 @@ export default function FreelancerDashboard() {
 
   // Lead form
   const [leadForm, setLeadForm] = useState({ customerFullName: "", customerIdNumber: "", customerPhone: "", bikeModel: "", paymentType: "", quantityInterested: "1", residenceLocation: "", county: "", leadNotes: "", duplicateOverrideReason: "" });
-  
-  // Conversion form
-  const [convForm, setConvForm] = useState({ bikeModel: "", quantity: "1", saleDate: todayStr(), invoiceNumber: "" });
-  const [invoiceError, setInvoiceError] = useState<string | null>(null);
-  const [invoicePhoto, setInvoicePhoto] = useState<{ uri: string; name: string } | null>(null);
-  const [salesAgreementPhoto, setSalesAgreementPhoto] = useState<{ uri: string; name: string } | null>(null);
-  const [convSuccess, setConvSuccess] = useState(false);
-  
-  // Commission
-  const [claimSubmitted, setClaimSubmitted] = useState(false);
-  const [claimDownloading, setClaimDownloading] = useState(false);
   
   // Payment
   const [paymentCode, setPaymentCode] = useState("");
@@ -349,18 +322,17 @@ export default function FreelancerDashboard() {
 
   const handleLeadRowClick = (lead: LeadCardItem) => { setSelectedLead(lead); setLeadView("VIEW_LEAD_DETAIL"); };
   const handleBackToLeadsList = () => { setSelectedLead(null); setLeadView("VIEW_LEAD_LIST"); };
-  const handleBackToSummary = () => { setSelectedLead(null); setLeadView("VIEW_SUMMARY"); setShowPaymentHistory(false); setClaimSubmitted(false); };
-  const handleProceedToSaleConversion = (lead: LeadCardItem) => {
+  const handleBackToSummary = () => { setSelectedLead(null); setLeadView("VIEW_SUMMARY"); setShowPaymentHistory(false); };
+  
+  const handleProceedToPaymentAck = (lead: LeadCardItem) => {
     setConversionLead(lead);
-    const eff = lead.invoice_status || lead.lead_status;
     setActiveTab("workflow");
-    if (eff === "paid") setWorkflowStage(4);
-    else if (eff === "converted_to_sale" || eff === "submitted") setWorkflowStage(3);
-    else setWorkflowStage(2);
+    setWorkflowStage(2);
   };
+  
   const handleLogout = async () => { await logout(); router.replace("/login"); };
 
-  // Lead submit (matching reference form fields)
+  // Lead submit 
   const handleLeadSubmit = async () => {
     if (!leadForm.customerFullName.trim() || !leadForm.customerIdNumber.trim() || !leadForm.customerPhone.trim() || !leadForm.bikeModel || !leadForm.paymentType) {
       Alert.alert("Missing", "All required fields (*) must be filled."); return;
@@ -379,46 +351,6 @@ export default function FreelancerDashboard() {
       loadDashboard(sessionCode, true);
     } catch (err: any) { setWfError(err.message); }
     finally { setWfSubmitting(false); }
-  };
-
-  const validateInvoice = (v:string) => /^inv-\d+$/i.test(v.trim());
-
-  const handleConversionSubmit = async () => {
-    const inv = convForm.invoiceNumber.trim();
-    if (!validateInvoice(inv)) { setInvoiceError("Format: INV- followed by numbers (e.g. INV-200)"); return; }
-    if (!convForm.bikeModel || !convForm.saleDate || !invoicePhoto) { Alert.alert("Missing","Bike model, sale date, and invoice photo are required."); return; }
-    setWfSubmitting(true); setWfError(null); setInvoiceError(null);
-    try {
-      const fd = new FormData();
-      fd.append("leadCode", conversionLead?.lead_code || ""); fd.append("customerName",conversionLead?.customer_full_name||"");
-      fd.append("customerPhone",conversionLead?.customer_phone||""); fd.append("customerIdNumber",conversionLead?.customer_id_number||"");
-      fd.append("bikeModel",convForm.bikeModel); fd.append("quantity",convForm.quantity);
-      fd.append("saleDate",convForm.saleDate); fd.append("invoiceNumber",inv.toUpperCase());
-      fd.append("freelancerCode",sessionCode);
-      const invRes = await fetch(invoicePhoto.uri); const invBlob = await invRes.blob();
-      fd.append("invoicePhoto",invBlob,invoicePhoto.name);
-      if (salesAgreementPhoto) { const saRes = await fetch(salesAgreementPhoto.uri); const saBlob = await saRes.blob(); fd.append("salesAgreementPhoto",saBlob,salesAgreementPhoto.name); }
-      await submitConversion(fd);
-      setConvSuccess(true);
-      setConvForm({ bikeModel:"",quantity:"1",saleDate:todayStr(),invoiceNumber:"" });
-      setInvoicePhoto(null); setSalesAgreementPhoto(null);
-      loadDashboard(sessionCode,true);
-    } catch (err:any) { setWfError(err.message); }
-    finally { setWfSubmitting(false); }
-  };
-
-  const handleClaimCommission = async () => {
-    const leadId = selectedLead?.id || conversionLead?.id;
-    if (!leadId) { Alert.alert("Error","No lead selected."); return; }
-    setClaimDownloading(true);
-    try {
-      await autoSubmitCommission(leadId);
-      try { await downloadCommissionInvoice(leadId); }
-      catch { /* PDF may not download on mobile */ }
-      setClaimSubmitted(true);
-      loadDashboard(sessionCode,true);
-    } catch (err:any) { Alert.alert("Error",err.message); }
-    finally { setClaimDownloading(false); }
   };
 
   const handlePaymentAcknowledge = async () => {
@@ -551,7 +483,7 @@ export default function FreelancerDashboard() {
             )}
 
             {leadView === "VIEW_LEAD_DETAIL" && selectedLead && (
-              <LeadDetailCard lead={selectedLead} onBack={handleBackToLeadsList} onProceedToSaleConversion={handleProceedToSaleConversion} />
+              <LeadDetailCard lead={selectedLead} onBack={handleBackToLeadsList} onProceedToPaymentAck={handleProceedToPaymentAck} />
             )}
           </>
         )}
@@ -571,7 +503,7 @@ export default function FreelancerDashboard() {
                       {isComplete ? <Check size={20} color="#fff" /> : <IconComponent size={20} color={isActive ? "#fff" : "#94a3b8"} />}
                     </TouchableOpacity>
                     <Text style={[s.stepLabel,isActive&&{color:"#3b4aff",fontWeight:"700"}]}>{step.label}</Text>
-                    {idx<3 && <View style={[s.stepLine,isComplete&&{backgroundColor:"#10b981"}]} />}
+                    {idx < 1 && <View style={[s.stepLine,isComplete&&{backgroundColor:"#10b981"}]} />}
                   </View>
                 );
               })}
@@ -590,7 +522,7 @@ export default function FreelancerDashboard() {
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer ID Number / KRA PIN *</Text><TextInput style={s.input} value={leadForm.customerIdNumber} onChangeText={v=>setLeadForm(p=>({...p,customerIdNumber:v}))} placeholder="Customer ID Number / KRA PIN *" placeholderTextColor="#94a3b8" /></View>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer Phone *</Text><TextInput style={s.input} value={leadForm.customerPhone} onChangeText={v=>setLeadForm(p=>({...p,customerPhone:v}))} placeholder="Customer Phone *" placeholderTextColor="#94a3b8" keyboardType="phone-pad" /></View>
                   
-                  {/* Dropped Picker for DropDownPicker */}
+                  {/* DropDownPicker */}
                   <View style={[s.fieldGroup, { zIndex: 3000 }]}>
                     <Text style={s.fieldLabel}>Bike Model *</Text>
                     <DropDownPicker
@@ -610,7 +542,7 @@ export default function FreelancerDashboard() {
                     />
                   </View>
 
-                  {/* Dropped Picker for DropDownPicker */}
+                  {/* DropDownPicker */}
                   <View style={[s.fieldGroup, { zIndex: 2000 }]}>
                     <Text style={s.fieldLabel}>Payment Type *</Text>
                     <DropDownPicker
@@ -642,113 +574,8 @@ export default function FreelancerDashboard() {
               </View>
             )}
 
-            {/* STAGE 2: SALE CONVERSION */}
+            {/* STAGE 2: PAYMENT ACKNOWLEDGEMENT (Formerly Stage 4) */}
             {workflowStage===2 && (
-              <View style={s.stageCard}>
-                {convSuccess ? (
-                  <View style={s.successScreen}>
-                    <View style={s.successCircle}><Check size={32} color="#059669" /></View>
-                    <Text style={s.successTitle}>Sale Confirmed and Submitted!</Text>
-                    <Text style={s.successDesc}>Your sale for <Text style={{fontWeight:"700"}}>{conversionLead?.customer_full_name||"Customer"}</Text> has been submitted and is pending Admin Approval.</Text>
-                    <StatusBadge status="under_review" />
-                    <Text style={s.successSubtext}>The Commission Claim step will become available after admin approval.</Text>
-                    <TouchableOpacity onPress={()=>{setConvSuccess(false);setActiveTab("cards");setLeadView("VIEW_SUMMARY");}} style={[s.submitBtn,{marginTop:16}]}><Text style={s.submitBtnText}>Go to Dashboard</Text></TouchableOpacity>
-                  </View>
-                ) : (
-                  <>
-                    <Text style={s.stageTitle}>Step 2: Sale Conversion</Text>
-                    <Text style={s.stageDesc}>{conversionLead?`Confirm the sale for ${conversionLead.customer_full_name} (Lead: ${conversionLead.lead_code})`:"Confirm a sale by entering transaction verification details."}</Text>
-                    {conversionLead && (
-                      <View style={s.contextBox}>
-                        <Text style={s.contextTitle}>Lead Context (Read-Only)</Text>
-                        <View style={s.contextGrid}>
-                          <View><Text style={s.contextLabel}>Lead Code</Text><Text style={s.contextValue}>{conversionLead.lead_code||"—"}</Text></View>
-                          <View><Text style={s.contextLabel}>Customer Full Name</Text><Text style={s.contextValue}>{conversionLead.customer_full_name||"—"}</Text></View>
-                          <View><Text style={s.contextLabel}>Customer Phone</Text><Text style={s.contextValue}>{conversionLead.customer_phone||"—"}</Text></View>
-                          <View><Text style={s.contextLabel}>Customer ID Number</Text><Text style={s.contextValue}>{conversionLead.customer_id_number||"—"}</Text></View>
-                        </View>
-                      </View>
-                    )}
-                    <View style={[s.formGrid, { zIndex: 3000 }]}>
-                      {/* Dropped Picker for DropDownPicker */}
-                      <View style={[s.fieldGroup, { zIndex: 3000 }]}>
-                        <Text style={s.fieldLabel}>Bike Model *</Text>
-                        <DropDownPicker
-                          open={convBikeOpen}
-                          value={convForm.bikeModel || null}
-                          items={bikeItems}
-                          setOpen={setConvBikeOpen}
-                          setValue={(val: any) => setConvForm(p => ({ ...p, bikeModel: typeof val === 'function' ? val(p.bikeModel) : val }))}
-                          setItems={setBikeItems}
-                          placeholder="Select bike model *"
-                          style={s.dropdown}
-                          textStyle={s.dropdownText}
-                          dropDownContainerStyle={s.dropdownContainer}
-                          zIndex={3000}
-                          zIndexInverse={1000}
-                          listMode="SCROLLVIEW"
-                        />
-                      </View>
-                      <View style={s.fieldGroup}><Text style={s.fieldLabel}>Quantity *</Text><TextInput style={s.input} value={convForm.quantity} onChangeText={v=>setConvForm(p=>({...p,quantity:v.replace(/[^0-9]/g,"")}))} placeholder="1" placeholderTextColor="#94a3b8" keyboardType="number-pad" /></View>
-                      <View style={s.fieldGroup}><Text style={s.fieldLabel}>Sale Date *</Text><TextInput style={s.input} value={convForm.saleDate} onChangeText={v=>setConvForm(p=>({...p,saleDate:v}))} placeholder="YYYY-MM-DD" placeholderTextColor="#94a3b8" /></View>
-                      <View style={s.fieldGroup}><Text style={s.fieldLabel}>Sales Invoice Number *</Text><TextInput style={s.input} value={convForm.invoiceNumber} onChangeText={v=>{setConvForm(p=>({...p,invoiceNumber:v}));if(v&&!validateInvoice(v))setInvoiceError("Format: INV- followed by numbers (e.g. INV-200)");else setInvoiceError(null);}} placeholder="INV-200" placeholderTextColor="#94a3b8" autoCapitalize="characters" />{invoiceError?<Text style={s.inlineError}>{invoiceError}</Text>:<Text style={s.hint}>Format: INV- followed by numbers (e.g. INV-200)</Text>}</View>
-                    </View>
-                    <View style={[s.formGrid, { marginTop: 14 }]}>
-                      <View style={s.fieldGroup}><Text style={s.fieldLabel}>Invoice Photo *</Text>
-                        {invoicePhoto?<View style={s.fileAttached}><Text style={s.fileName} numberOfLines={1}>{invoicePhoto.name}</Text><TouchableOpacity onPress={()=>setInvoicePhoto(null)}><Text style={s.removeFile}>Remove</Text></TouchableOpacity></View>
-                        :<TouchableOpacity onPress={async()=>{const r=await ImagePicker.launchImageLibraryAsync({mediaTypes:["images"],quality:.8});if(!r.canceled&&r.assets?.[0])setInvoicePhoto({uri:r.assets[0].uri,name:r.assets[0].fileName||"invoice.jpg"});}} style={s.filePickerBtn}><Text style={s.filePickerText}>Tap to upload Invoice Photo *</Text></TouchableOpacity>}
-                        <Text style={s.hint}>Accepted: JPG, PNG</Text>
-                      </View>
-                      <View style={s.fieldGroup}><Text style={s.fieldLabel}>Sales Agreement Photo</Text>
-                        {salesAgreementPhoto?<View style={s.fileAttached}><Text style={s.fileName} numberOfLines={1}>{salesAgreementPhoto.name}</Text><TouchableOpacity onPress={()=>setSalesAgreementPhoto(null)}><Text style={s.removeFile}>Remove</Text></TouchableOpacity></View>
-                        :<TouchableOpacity onPress={async()=>{const r=await ImagePicker.launchImageLibraryAsync({mediaTypes:["images"],quality:.8});if(!r.canceled&&r.assets?.[0])setSalesAgreementPhoto({uri:r.assets[0].uri,name:r.assets[0].fileName||"agreement.jpg"});}} style={s.filePickerBtn}><Text style={s.filePickerText}>Tap to upload Sales Agreement</Text></TouchableOpacity>}
-                        <Text style={s.hint}>Accepted: JPG, PNG</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity onPress={handleConversionSubmit} disabled={wfSubmitting} style={[s.submitBtn,wfSubmitting&&{opacity:.5}]}>
-                      {wfSubmitting?<ActivityIndicator color="#fff" />:<Text style={s.submitBtnText}>Submit Sale Conversion</Text>}
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            )}
-
-            {/* STAGE 3: COMMISSION CLAIM */}
-            {workflowStage===3 && (
-              <View style={s.stageCard}>
-                <Text style={s.stageTitle}>Step 3: Commission Claim</Text>
-                <Text style={s.stageDesc}>Generate and download your commission invoice, then submit your claim.</Text>
-                <View style={s.invoiceBox}>
-                  <Text style={s.invoiceBoxTitle}>Your Commission Invoice</Text>
-                  <View style={s.invoiceGrid}>
-                    <View><Text style={s.invoiceLabel}>Invoice Code</Text><Text style={s.invoiceValue}>{selectedLead?.lead_code?`COM-${selectedLead.lead_code.replace("LED-","").replace("FRL-","")}`:"Pending"}</Text></View>
-                    <View><Text style={s.invoiceLabel}>Invoice To</Text><Text style={s.invoiceValue}>Tamtech Tools Limited</Text></View>
-                    <View><Text style={s.invoiceLabel}>Date</Text><Text style={s.invoiceValue}>{formatDate(new Date().toISOString())}</Text></View>
-                    <View><Text style={s.invoiceLabel}>Invoice From</Text><Text style={s.invoiceValue}>{freelancer?.full_name||sessionCode||"—"}</Text></View>
-                  </View>
-                  {claimSubmitted ? (
-                    <>
-                      <View style={s.claimPendingBox}>
-                        <View style={{flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8}}>
-                          <Clock size={20} color="#155e75" />
-                          <Text style={s.claimPendingTitle}>Commission Request Submitted</Text>
-                        </View>
-                        <Text style={s.claimPendingText}>Your commission request is under payment processing by the admin. You will receive a message once it is executed.</Text>
-                      </View>
-                      <TouchableOpacity onPress={()=>{setActiveTab("cards");setLeadView("VIEW_SUMMARY");setClaimSubmitted(false);}} style={s.submitBtn}><Text style={s.submitBtnText}>Go to Dashboard →</Text></TouchableOpacity>
-                    </>
-                  ) : (
-                    <>
-                      <TouchableOpacity onPress={handleClaimCommission} disabled={claimDownloading} style={[s.submitBtn,{marginTop:12},claimDownloading&&{opacity:.5}]}><Text style={s.submitBtnText}>{claimDownloading?"Processing...":"Download Commission Invoice (PDF)"}</Text></TouchableOpacity>
-                      <Text style={s.claimHint}>Download the invoice PDF and review before submitting your claim</Text>
-                    </>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* STAGE 4: PAYMENT ACKNOWLEDGEMENT */}
-            {workflowStage===4 && (
               <View style={s.stageCard}>
                 {paymentDone ? (
                   <View style={s.successScreen}>
@@ -760,7 +587,7 @@ export default function FreelancerDashboard() {
                   </View>
                 ) : (
                   <>
-                    <Text style={s.stageTitle}>Step 4: Payment Acknowledged</Text>
+                    <Text style={s.stageTitle}>Step 2: Payment Acknowledged</Text>
                     <Text style={s.stageDesc}>Confirm you have received the commission payment.</Text>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Payment Code *</Text><TextInput style={s.input} value={paymentCode} onChangeText={setPaymentCode} placeholder="Payment code" placeholderTextColor="#94a3b8" autoCapitalize="characters" /></View>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Receipt URL (optional)</Text><TextInput style={s.input} value={paymentReceiptUrl} onChangeText={setPaymentReceiptUrl} placeholder="Receipt URL (optional)" placeholderTextColor="#94a3b8" /></View>
