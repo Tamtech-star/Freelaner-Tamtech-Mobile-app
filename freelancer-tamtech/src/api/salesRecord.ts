@@ -1,5 +1,4 @@
 import api from './client'
-import type { ApiResponse } from '../types'
 
 //  Types 
 export interface SalesRecordItem {
@@ -45,8 +44,7 @@ export async function fetchSalesHistory(): Promise<SalesRecordItem[]> {
 export async function submitSalesRecord(
   formData: FormData
 ): Promise<SubmitSalesResponse> {
-  const response = await api.post<SubmitSalesResponse>('/sales-record', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  // React Native supplies the multipart header and generated boundary.
+  const response = await api.post<SubmitSalesResponse>('/sales-record', formData)
   return response.data
 }

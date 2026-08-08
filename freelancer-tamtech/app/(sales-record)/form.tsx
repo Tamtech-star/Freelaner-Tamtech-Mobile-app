@@ -284,8 +284,11 @@ export default function SalesRecordForm() {
       formData.append("paymentType", form.paymentType)
       formData.append("financeDetails", form.financeDetails)
       formData.append("bikeColor", form.bikeColor)
-      formData.append("hasInsurance", form.hasInsurance)
-      formData.append("hasTracker", form.hasTracker)
+      // Force insurance and tracker values to safe uppercase text before sending
+      const formattedInsurance = form.hasInsurance ? form.hasInsurance.toUpperCase() : "NO";
+      const formattedTracker = form.hasTracker ? form.hasTracker.toUpperCase() : "NO";
+      formData.append("hasInsurance", formattedInsurance === "NO" ? "NO" : formattedInsurance);
+      formData.append("hasTracker", formattedTracker === "NO" ? "NO" : formattedTracker);
       formData.append("referralName", form.referralName)
       formData.append("deploymentName", form.deploymentName)
 
@@ -294,13 +297,15 @@ export default function SalesRecordForm() {
       formData.append("saleDate", form.saleDate)
       formData.append("quantity", form.quantity)
 
-      // Files
+      // Files (Corrected for React Native XHR bridge)
       for (const field of DOCUMENT_FIELDS) {
         const file = files[field.key]
-        if (file) {
-          const response = await fetch(file.uri)
-          const blob = await response.blob()
-          formData.append(field.key, blob, file.name)
+        if (file && file.uri) {
+          formData.append(field.key, {
+            uri: file.uri,
+            name: file.name || `${field.key}.jpg`,
+            type: file.type || 'image/jpeg',
+          } as any)
         }
       }
 

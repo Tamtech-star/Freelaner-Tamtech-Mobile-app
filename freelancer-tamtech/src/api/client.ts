@@ -5,9 +5,6 @@ import { API_BASE_URL, STORAGE_KEYS } from '../constants/config'
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
 let isRedirecting = false
