@@ -266,7 +266,8 @@ export default function SalesRecordForm() {
 
     try {
       const formData = new FormData()
-      formData.append("submissionType", "freelancer_lead")
+      // The server upgrades this to freelancer_lead only when an open lead matches.
+      formData.append("submissionType", "direct_sale")
       formData.append("salesAgentName", user?.name || "internal-staff")
 
       // Customer fields
