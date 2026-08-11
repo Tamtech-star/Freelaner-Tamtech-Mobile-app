@@ -1,4 +1,5 @@
 import api from './client'
+import { enrichSalesDisplayFields } from '../utils/salesDisplay'
 
 //  Types 
 export interface AdminMetrics {
@@ -137,6 +138,8 @@ export interface ConvertedSaleRow {
   quantity: number
   paid_kes: number
   payment_status: string
+  freelancer_name?: string | null
+  payment_type?: string | null
   invoice_photo_url: string | null
   agreement_photo_url?: string | null
   id_doc_url?: string | null
@@ -269,13 +272,19 @@ export async function getAdminLeads(): Promise<LeadRow[]> {
 // Converted Sales 
 
 export async function getAllSales(): Promise<ConvertedSaleRow[]> {
-  const res = await api.get<{ items: ConvertedSaleRow[] }>('/sales-record/history')
-  return res.data.items || []
+  const [salesRes, leads] = await Promise.all([
+    api.get<{ items: ConvertedSaleRow[] }>('/sales-record/history'),
+    getAdminLeads(),
+  ])
+  return enrichSalesDisplayFields(salesRes.data.items || [], leads)
 }
 
 export async function getConvertedSales(): Promise<ConvertedSaleRow[]> {
-  const res = await api.get<{ items: ConvertedSaleRow[] }>('/admin/convertedsales')
-  return res.data.items || []
+  const [salesRes, leads] = await Promise.all([
+    api.get<{ items: ConvertedSaleRow[] }>('/admin/convertedsales'),
+    getAdminLeads(),
+  ])
+  return enrichSalesDisplayFields(salesRes.data.items || [], leads)
 }
 
 //  Payment Records 

@@ -15,6 +15,7 @@ import {
 import { router } from "expo-router"
 import { getConvertedSales, type ConvertedSaleRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
+import { formatPaymentMode, getFreelancerName } from "../../src/utils/salesDisplay"
 
 const BRAND_BLUE = "#2881FA"
 const CSV_URL = "https://spirospares.com/api/admin/convertedsales/csv"
@@ -82,8 +83,6 @@ export default function ConvertedSalesScreen() {
       return d || ""
     }
   }
-
-  const fmt = (n: number) => n.toLocaleString()
 
   return (
     <View style={s.container}>
@@ -173,14 +172,12 @@ export default function ConvertedSalesScreen() {
               <Text style={s.subText}> {formatDate(item.sale_date)}</Text>
             </View>
             <View style={s.amountRow}>
-              <Text style={s.amountLabel}>Commission</Text>
-              <Text style={s.amountValue}>KES {fmt(Number(item.commission_kes) || 0)}</Text>
+              <Text style={s.amountLabel}>Freelancer Name</Text>
+              <Text style={s.amountValue}>{getFreelancerName(item)}</Text>
             </View>
             <View style={s.amountRow}>
-              <Text style={s.amountLabel}>Paid</Text>
-              <Text style={[s.amountValue, { color: item.paid_kes > 0 ? "#10b981" : "#ef4444" }]}>
-                KES {fmt(Number(item.paid_kes) || 0)}
-              </Text>
+              <Text style={s.amountLabel}>Payment Mode</Text>
+              <Text style={s.amountValue}>{formatPaymentMode(item.payment_type)}</Text>
             </View>
             {item.submission_type && (
               <Text style={s.typeTag}>{item.submission_type.replace(/_/g, " ")}</Text>
@@ -218,16 +215,11 @@ export default function ConvertedSalesScreen() {
                   <Text style={s.detailLabel}>Quantity</Text>
                   <Text style={s.detailValue}>{selectedSale.quantity}</Text>
 
-                  <Text style={s.detailLabel}>Freelancer</Text>
-                  <Text style={s.detailValue}>{selectedSale.freight || "N/A"}</Text>
+                  <Text style={s.detailLabel}>Freelancer Name</Text>
+                  <Text style={s.detailValue}>{getFreelancerName(selectedSale)}</Text>
 
-                  <Text style={s.detailLabel}>Commission (KES)</Text>
-                  <Text style={s.detailValue}>{fmt(Number(selectedSale.commission_kes) || 0)}</Text>
-
-                  <Text style={s.detailLabel}>Paid (KES)</Text>
-                  <Text style={[s.detailValue, { color: selectedSale.paid_kes > 0 ? "#10b981" : "#ef4444" }]}>
-                    {fmt(Number(selectedSale.paid_kes) || 0)}
-                  </Text>
+                  <Text style={s.detailLabel}>Payment Mode</Text>
+                  <Text style={s.detailValue}>{formatPaymentMode(selectedSale.payment_type)}</Text>
 
                   <Text style={s.detailLabel}>Payment Status</Text>
                   <Text style={s.detailValue}>{selectedSale.payment_status}</Text>

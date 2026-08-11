@@ -15,6 +15,8 @@ export interface SalesRecordItem {
   commission_kes: string
   paid_kes: number
   payment_status: string
+  freelancer_name?: string | null
+  payment_type?: string | null
   invoice_photo_url?: string | null
   agreement_photo_url?: string | null
   id_doc_url?: string | null

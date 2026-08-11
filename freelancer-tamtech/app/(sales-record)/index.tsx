@@ -16,6 +16,7 @@ import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import { fetchSalesHistory, type SalesRecordItem } from "../../src/api/salesRecord"
 import { COLORS, SHADOWS } from "../../src/constants/config"
+import { getFreelancerCardName } from "../../src/utils/salesDisplay"
 
 // Types
 type SaleRecordRow = SalesRecordItem
@@ -199,6 +200,9 @@ export default function SalesRecordHome() {
                   <Text style={s.bikeModel}>{item.bike_model_sold}</Text>
                   <Text style={s.qtyText}>Qty: {item.quantity}</Text>
                 </View>
+                {getFreelancerCardName(item) && (
+                  <Text style={s.freelancerName}>Freelancer: {getFreelancerCardName(item)}</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -292,6 +296,10 @@ export default function SalesRecordHome() {
                     <Text style={s.bikeModel}>{item.bike_model_sold}</Text>
                     <Text style={s.qtyText}>Qty: {item.quantity}</Text>
                   </View>
+
+                  {getFreelancerCardName(item) && (
+                    <Text style={s.freelancerName}>Freelancer: {getFreelancerCardName(item)}</Text>
+                  )}
 
                   {/* Row 3: Date + Agent + Status */}
                   <View style={s.histRow3}>
@@ -533,6 +541,7 @@ const s = StyleSheet.create({
   invoiceNum: { fontFamily: "monospace", fontSize: 12, color: "#64748b" },
   bikeModel: { fontSize: 12, color: "#64748b" },
   qtyText: { fontSize: 12, color: "#64748b" },
+  freelancerName: { marginTop: 6, fontSize: 12, fontWeight: "600", color: "#475569" },
   histRow3: { marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   dateText: { fontSize: 12, color: "#94a3b8" },
   histRight: { flexDirection: "row", alignItems: "center", gap: 8 },
