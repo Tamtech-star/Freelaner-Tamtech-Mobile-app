@@ -13,8 +13,10 @@ import { router } from "expo-router"
 import * as ImagePicker from "expo-image-picker"
 import DropDownPicker from "react-native-dropdown-picker"
 import { useAuthStore } from "../../src/store/authStore"
-import { submitSalesRecord } from "../../src/api/salesRecord"
 import { COLORS, SHADOWS } from "../../src/constants/config"
+import { insertPendingSalesRecord } from "../../src/offline/database"
+import { buildPendingSalesRecord } from "../../src/offline/syncCore"
+import { runSyncWorker, type OfflineSubmissionPayload } from "../../src/offline/syncWorker"
 
 //  Constants 
 const BIKE_MODELS = [
@@ -265,54 +267,61 @@ export default function SalesRecordForm() {
     setSuccess(null)
 
     try {
-      const formData = new FormData()
-      // The server upgrades this to freelancer_lead only when an open lead matches.
-      formData.append("submissionType", "direct_sale")
-      formData.append("salesAgentName", user?.name || "internal-staff")
+      const formattedInsurance = form.hasInsurance ? form.hasInsurance.toUpperCase() : "NO"
+      const formattedTracker = form.hasTracker ? form.hasTracker.toUpperCase() : "NO"
+      const payload: OfflineSubmissionPayload = {
+        submissionType: "direct_sale",
+        salesAgentName: user?.name || "internal-staff",
+        customerType: form.customerType,
+        customerFullName: form.customerFullName,
+        customerIdNumber: form.customerIdNumber,
+        customerPhone: form.customerPhone,
+        kraPin: form.kraPin,
+        customerLocation: form.customerLocation,
+        bikeModel: form.bikeModel,
+        bikeRegistrationNumber: form.bikeRegistrationNumber,
+        chassisNumber: form.chassisNumber,
+        paymentType: form.paymentType,
+        financeDetails: form.financeDetails,
+        bikeColor: form.bikeColor,
+        hasInsurance: formattedInsurance === "NO" ? "NO" : formattedInsurance,
+        hasTracker: formattedTracker === "NO" ? "NO" : formattedTracker,
+        referralName: form.referralName,
+        deploymentName: form.deploymentName,
+        invoiceNumber: form.invoiceNumber,
+        saleDate: form.saleDate,
+        quantity: form.quantity,
+      }
 
-      // Customer fields
-      formData.append("customerType", form.customerType)
-      formData.append("customerFullName", form.customerFullName)
-      formData.append("customerIdNumber", form.customerIdNumber)
-      formData.append("customerPhone", form.customerPhone)
-      formData.append("kraPin", form.kraPin)
-      formData.append("customerLocation", form.customerLocation)
-
-      // Bike/Sale fields
-      formData.append("bikeModel", form.bikeModel)
-      formData.append("bikeRegistrationNumber", form.bikeRegistrationNumber)
-      formData.append("chassisNumber", form.chassisNumber)
-      formData.append("paymentType", form.paymentType)
-      formData.append("financeDetails", form.financeDetails)
-      formData.append("bikeColor", form.bikeColor)
-      // Force insurance and tracker values to safe uppercase text before sending
-      const formattedInsurance = form.hasInsurance ? form.hasInsurance.toUpperCase() : "NO";
-      const formattedTracker = form.hasTracker ? form.hasTracker.toUpperCase() : "NO";
-      formData.append("hasInsurance", formattedInsurance === "NO" ? "NO" : formattedInsurance);
-      formData.append("hasTracker", formattedTracker === "NO" ? "NO" : formattedTracker);
-      formData.append("referralName", form.referralName)
-      formData.append("deploymentName", form.deploymentName)
-
-      // Invoice fields
-      formData.append("invoiceNumber", form.invoiceNumber)
-      formData.append("saleDate", form.saleDate)
-      formData.append("quantity", form.quantity)
-
-      // Files (Corrected for React Native XHR bridge)
       for (const field of DOCUMENT_FIELDS) {
         const file = files[field.key]
         if (file && file.uri) {
-          formData.append(field.key, {
+          payload[field.key] = {
             uri: file.uri,
             name: file.name || `${field.key}.jpg`,
-            type: file.type || 'image/jpeg',
-          } as any)
+            type: file.type || "image/jpeg",
+          }
         }
       }
 
-      const result = await submitSalesRecord(formData)
+      const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      const queuedAt = new Date().toISOString()
+      const pendingRecord = buildPendingSalesRecord(localId, {
+        submissionType: "direct_sale",
+        salesAgentName: user?.name || "internal-staff",
+        customerFullName: form.customerFullName,
+        customerLocation: form.customerLocation,
+        bikeModel: form.bikeModel,
+        invoiceNumber: form.invoiceNumber,
+        saleDate: form.saleDate,
+        quantity: form.quantity,
+        paymentType: form.paymentType,
+      }, queuedAt)
+      pendingRecord.payload_json = JSON.stringify(payload)
+      await insertPendingSalesRecord(pendingRecord)
+      void runSyncWorker().catch(() => undefined)
 
-      setSuccess(`Sale recorded successfully! Code: ${result.conversionCode}`)
+      setSuccess(`Sale saved on this device and queued for sync. Code: ${pendingRecord.conversion_code}`)
       setPreview(null)
       setForm(INITIAL_FORM)
       setFiles({})

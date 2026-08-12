@@ -1,3 +1,3 @@
-# Expo HAS CHANGED
-
-Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before writing any code.
+### AGENT EXECUTION RULES
+- DO NOT use `Browser Navigate`, `Web Search`, or any external web browsing tools.
+- Rely ONLY on local project files, installed node_modules, and provided documentation in this file.

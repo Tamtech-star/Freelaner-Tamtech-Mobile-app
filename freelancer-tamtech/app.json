@@ -50,7 +50,8 @@
             "extraProguardRules": "-keep public class com.reactnativecommunity.picker.** { *; }\n-dontwarn com.reactnativecommunity.picker.**"
           }
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "extra": {
       "router": {},

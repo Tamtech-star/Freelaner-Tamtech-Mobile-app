@@ -14,9 +14,10 @@ import {
 } from "react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
-import { fetchSalesHistory, type SalesRecordItem } from "../../src/api/salesRecord"
+import { getSalesHistoryLocalFirst, syncSalesHistoryNow, type SalesRecordItem } from "../../src/api/salesRecord"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { getFreelancerCardName } from "../../src/utils/salesDisplay"
+import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 
 // Types
 type SaleRecordRow = SalesRecordItem
@@ -51,7 +52,7 @@ export default function SalesRecordHome() {
   const loadHistory = useCallback(async () => {
     try {
       setLoadError(null)
-      const items = await fetchSalesHistory()
+      const items = await getSalesHistoryLocalFirst()
       setRows(items)
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || "Failed to load sales history."
@@ -65,12 +66,20 @@ export default function SalesRecordHome() {
   // Load on mount
   useEffect(() => {
     loadHistory()
+    return subscribeToOfflineData(loadHistory)
   }, [loadHistory])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await loadHistory()
-  }, [loadHistory])
+    try {
+      setRows(await syncSalesHistoryNow())
+      setLoadError(null)
+    } catch (err: any) {
+      setLoadError(err?.response?.data?.error || err?.message || "Failed to sync sales history.")
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
   // Reload when history modal opens
   useEffect(() => {

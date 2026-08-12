@@ -1,5 +1,7 @@
 import api from './client'
 import { enrichSalesDisplayFields } from '../utils/salesDisplay'
+import { deleteLocalFreelancer, getLocalFreelancers, getLocalSalesRecords } from '../offline/database'
+import { runSyncWorker } from '../offline/syncWorker'
 
 //  Types 
 export interface AdminMetrics {
@@ -254,8 +256,20 @@ export async function getFreelancers(): Promise<FreelancerRow[]> {
   return res.data.freelancers || []
 }
 
+export async function getFreelancersLocalFirst(): Promise<FreelancerRow[]> {
+  const cached = await getLocalFreelancers()
+  void runSyncWorker().catch(() => undefined)
+  return cached
+}
+
+export async function syncFreelancersNow(): Promise<FreelancerRow[]> {
+  await runSyncWorker()
+  return getLocalFreelancers()
+}
+
 export async function deleteFreelancer(freelancerId: string): Promise<void> {
   await api.post('/admin/freelancers/delete', { freelancerId })
+  await deleteLocalFreelancer(freelancerId)
 }
 
 export async function getFreelancerById(id: string): Promise<FreelancerDetail> {
@@ -279,12 +293,38 @@ export async function getAllSales(): Promise<ConvertedSaleRow[]> {
   return enrichSalesDisplayFields(salesRes.data.items || [], leads)
 }
 
+export async function getAllSalesLocalFirst(): Promise<ConvertedSaleRow[]> {
+  const cached = await getLocalSalesRecords()
+  void runSyncWorker().catch(() => undefined)
+  return enrichSalesDisplayFields(cached as ConvertedSaleRow[], [])
+}
+
+export async function syncAllSalesNow(): Promise<ConvertedSaleRow[]> {
+  await runSyncWorker()
+  const cached = await getLocalSalesRecords()
+  return enrichSalesDisplayFields(cached as ConvertedSaleRow[], [])
+}
+
 export async function getConvertedSales(): Promise<ConvertedSaleRow[]> {
   const [salesRes, leads] = await Promise.all([
     api.get<{ items: ConvertedSaleRow[] }>('/admin/convertedsales'),
     getAdminLeads(),
   ])
   return enrichSalesDisplayFields(salesRes.data.items || [], leads)
+}
+
+export async function getConvertedSalesLocalFirst(): Promise<ConvertedSaleRow[]> {
+  const cached = await getLocalSalesRecords()
+  void runSyncWorker().catch(() => undefined)
+  return enrichSalesDisplayFields(
+    cached.filter((sale) => sale.submission_type === 'freelancer_lead') as ConvertedSaleRow[],
+    [],
+  )
+}
+
+export async function syncConvertedSalesNow(): Promise<ConvertedSaleRow[]> {
+  const cached = await syncAllSalesNow()
+  return cached.filter((sale) => sale.submission_type === 'freelancer_lead')
 }
 
 //  Payment Records 

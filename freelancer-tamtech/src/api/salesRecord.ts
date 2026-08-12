@@ -1,4 +1,6 @@
 import api from './client'
+import { getLocalSalesRecords, upsertSalesRecords } from '../offline/database'
+import { runSyncWorker } from '../offline/syncWorker'
 
 //  Types 
 export interface SalesRecordItem {
@@ -39,6 +41,23 @@ export interface SubmitSalesResponse {
 export async function fetchSalesHistory(): Promise<SalesRecordItem[]> {
   const response = await api.get<SalesHistoryResponse>('/sales-record/history')
   return response.data.items || []
+}
+
+export async function getSalesHistoryLocalFirst(): Promise<SalesRecordItem[]> {
+  const cached = await getLocalSalesRecords()
+  void runSyncWorker().catch(() => undefined)
+  return cached
+}
+
+export async function syncSalesHistoryNow(): Promise<SalesRecordItem[]> {
+  await runSyncWorker()
+  return getLocalSalesRecords()
+}
+
+export async function refreshSalesHistoryCache(): Promise<SalesRecordItem[]> {
+  const items = await fetchSalesHistory()
+  await upsertSalesRecords(items)
+  return items
 }
 
 //  Submit new sales record 

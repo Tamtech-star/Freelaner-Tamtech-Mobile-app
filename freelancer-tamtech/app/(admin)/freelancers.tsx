@@ -13,8 +13,9 @@ import {
   Linking,
 } from "react-native"
 import { router } from "expo-router"
-import { getFreelancers, deleteFreelancer, type FreelancerRow } from "../../src/api/admin"
+import { getFreelancersLocalFirst, syncFreelancersNow, deleteFreelancer, type FreelancerRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
+import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 
 const BRAND_BLUE = "#2881FA"
 const CSV_URL = "https://spirospares.com/api/portal/admin/freelancers/csv"
@@ -38,7 +39,7 @@ export default function FreelancersScreen() {
   const load = useCallback(async () => {
     try {
       setError(null)
-      const data = await getFreelancers()
+      const data = await getFreelancersLocalFirst()
       setFreelancers(data)
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || "Failed to load freelancers.")
@@ -48,12 +49,22 @@ export default function FreelancersScreen() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    return subscribeToOfflineData(load)
+  }, [load])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await load()
-  }, [load])
+    try {
+      setFreelancers(await syncFreelancersNow())
+      setError(null)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Failed to sync freelancers.")
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
   const handleDelete = (freelancer: FreelancerRow) => {
     Alert.alert(

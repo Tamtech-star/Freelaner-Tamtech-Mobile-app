@@ -4,12 +4,21 @@ import { StatusBar } from "expo-status-bar"
 import { ActivityIndicator, View, StyleSheet } from "react-native"
 import { useAuthStore } from "../src/store/authStore"
 import { COLORS } from "../src/constants/config"
+import { initializeDatabase } from "../src/offline/database"
+import { startSyncWorker } from "../src/offline/syncWorker"
 
 export default function RootLayout() {
   const { isLoading, isAuthenticated, role, restoreSession } = useAuthStore()
 
   useEffect(() => {
     restoreSession()
+    let stopSync: (() => void) | undefined
+    void initializeDatabase()
+      .then(() => {
+        stopSync = startSyncWorker()
+      })
+      .catch(() => undefined)
+    return () => stopSync?.()
   }, [])
 
   if (isLoading) {

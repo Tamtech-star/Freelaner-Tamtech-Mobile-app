@@ -12,9 +12,10 @@ import {
   Modal,
 } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
-import { getAllSales, getConvertedSales, type ConvertedSaleRow } from "../../src/api/admin"
+import { getAllSalesLocalFirst, getConvertedSalesLocalFirst, syncAllSalesNow, syncConvertedSalesNow, type ConvertedSaleRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { formatPaymentMode, getFreelancerName } from "../../src/utils/salesDisplay"
+import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 
 const BRAND_BLUE = "#2881FA"
 
@@ -39,7 +40,7 @@ export default function SalesListScreen() {
   const load = useCallback(async () => {
     try {
       setError(null)
-      const data = isFreelancer ? await getConvertedSales() : await getAllSales()
+      const data = isFreelancer ? await getConvertedSalesLocalFirst() : await getAllSalesLocalFirst()
       // Apply submission type filter
       let filtered = data
       if (isFreelancer) {
@@ -56,12 +57,28 @@ export default function SalesListScreen() {
     }
   }, [filter, isFreelancer])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    return subscribeToOfflineData(load)
+  }, [load])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await load()
-  }, [load])
+    try {
+      const data = isFreelancer ? await syncConvertedSalesNow() : await syncAllSalesNow()
+      const filtered = isFreelancer
+        ? data.filter((sale) => sale.submission_type === "freelancer_lead")
+        : filter === "direct"
+          ? data.filter((sale) => sale.submission_type === "direct_sale")
+          : data
+      setSales(filtered)
+      setError(null)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Failed to sync sales.")
+    } finally {
+      setRefreshing(false)
+    }
+  }, [filter, isFreelancer])
 
   const formatDate = (d: string) => {
     try {
