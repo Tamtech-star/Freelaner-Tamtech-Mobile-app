@@ -108,7 +108,7 @@ export async function upsertSalesRecords(records: SalesRecordItem[], updatedAt =
     for (const row of records) {
       await txn.runAsync(
         `INSERT INTO sales_records (id, conversion_code, submission_type, customer_name, freight, sales_agent_name, sales_invoice_number, bike_model_sold, sale_date, quantity, commission_kes, paid_kes, payment_status, freelancer_name, payment_type, invoice_photo_url, agreement_photo_url, id_doc_url, kra_doc_url, bike_photo_url, chassis_photo_url, sync_status, updated_at, payload_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET conversion_code=excluded.conversion_code, submission_type=excluded.submission_type, customer_name=excluded.customer_name, freight=excluded.freight, sales_agent_name=excluded.sales_agent_name, sales_invoice_number=excluded.sales_invoice_number, bike_model_sold=excluded.bike_model_sold, sale_date=excluded.sale_date, quantity=excluded.quantity, commission_kes=excluded.commission_kes, paid_kes=excluded.paid_kes, payment_status=excluded.payment_status, freelancer_name=excluded.freelancer_name, payment_type=excluded.payment_type, invoice_photo_url=excluded.invoice_photo_url, agreement_photo_url=excluded.agreement_photo_url, id_doc_url=excluded.id_doc_url, kra_doc_url=excluded.kra_doc_url, bike_photo_url=excluded.bike_photo_url, chassis_photo_url=excluded.chassis_photo_url, updated_at=excluded.updated_at`,
         salesParams({ ...row, updated_at: updatedAt }),
       )
@@ -119,7 +119,7 @@ export async function upsertSalesRecords(records: SalesRecordItem[], updatedAt =
 export async function insertPendingSalesRecord(record: PendingSalesRecord): Promise<void> {
   const db = await initializeDatabase()
   await db.runAsync(
-    `INSERT INTO sales_records (id, conversion_code, submission_type, customer_name, freight, sales_agent_name, sales_invoice_number, bike_model_sold, sale_date, quantity, commission_kes, paid_kes, payment_status, freelancer_name, payment_type, invoice_photo_url, agreement_photo_url, id_doc_url, kra_doc_url, bike_photo_url, chassis_photo_url, sync_status, updated_at, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO sales_records (id, conversion_code, submission_type, customer_name, freight, sales_agent_name, sales_invoice_number, bike_model_sold, sale_date, quantity, commission_kes, paid_kes, payment_status, freelancer_name, payment_type, invoice_photo_url, agreement_photo_url, id_doc_url, kra_doc_url, bike_photo_url, chassis_photo_url, sync_status, updated_at, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     salesParams(record),
   )
 }

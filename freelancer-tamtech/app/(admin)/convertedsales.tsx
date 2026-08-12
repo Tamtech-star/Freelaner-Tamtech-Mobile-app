@@ -13,12 +13,15 @@ import {
   Modal,
 } from "react-native"
 import { router } from "expo-router"
-import { getConvertedSales, type ConvertedSaleRow } from "../../src/api/admin"
+import { getConvertedSalesLocalFirst, syncConvertedSalesNow, type ConvertedSaleRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { formatPaymentMode, getFreelancerName } from "../../src/utils/salesDisplay"
+import { Download } from "lucide-react-native"
+import { subscribeToOfflineData } from "../../src/offline/syncWorker"
+import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
 
 const BRAND_BLUE = "#2881FA"
-const CSV_URL = "https://spirospares.com/api/admin/convertedsales/csv"
+
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   paid: { bg: "#d1fae5", text: "#065f46" },
@@ -33,11 +36,12 @@ export default function ConvertedSalesScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState("")
   const [selectedSale, setSelectedSale] = useState<ConvertedSaleRow | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   const load = useCallback(async () => {
     try {
       setError(null)
-      const data = await getConvertedSales()
+      const data = await getConvertedSalesLocalFirst()
       // Filter locally to only freelancer_lead — backend may return other types
       setSales(data.filter((s) => s.submission_type === "freelancer_lead"))
     } catch (err: any) {
@@ -48,18 +52,31 @@ export default function ConvertedSalesScreen() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    return subscribeToOfflineData(load)
+  }, [load])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await load()
-  }, [load])
+    try {
+      setSales(await syncConvertedSalesNow())
+      setError(null)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Failed to sync converted sales.")
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
   const handleCsvDownload = async () => {
+    setDownloading(true)
     try {
-      await Linking.openURL(CSV_URL)
-    } catch {
-      Alert.alert("Error", "Could not open download link.")
+      await downloadSalesCsv(filtered, "Freelancer Lead Sales")
+    } catch (err: any) {
+      Alert.alert("Download Failed", err?.message || "Could not create the freelancer lead sales CSV file.")
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -103,8 +120,9 @@ export default function ConvertedSalesScreen() {
             <Text style={s.headerSub}>{sales.length} conversions</Text>
           </View>
           <View style={s.headerActions}>
-            <TouchableOpacity onPress={handleCsvDownload} style={s.csvBtn}>
-              <Text style={s.csvBtnText}>⬇ CSV</Text>
+            <TouchableOpacity onPress={handleCsvDownload} style={[s.csvBtn, (downloading || filtered.length === 0) && s.disabledBtn]} disabled={downloading || filtered.length === 0}>
+              {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
+              <Text style={s.csvBtnText}>{downloading ? "Preparing" : "CSV"}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
               <Text style={s.backText}>Back</Text>
@@ -320,14 +338,21 @@ const s = StyleSheet.create({
   headerLeft: { flex: 1 },
   headerTitle: { fontSize: 22, fontWeight: "700", color: "#0f172a" },
   headerSub: { marginTop: 4, fontSize: 13, color: "#64748b" },
-  headerActions: { flexDirection: "row", gap: 8 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   csvBtn: {
+    minWidth: 82,
+    height: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     backgroundColor: "#10b981",
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
   },
   csvBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  disabledBtn: { opacity: 0.5 },
   backBtn: {
     paddingHorizontal: 12,
     paddingVertical: 7,

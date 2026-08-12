@@ -10,15 +10,16 @@ import {
   Alert,
   Modal,
   StyleSheet,
-  Linking,
 } from "react-native"
+import { Download } from "lucide-react-native"
 import { router } from "expo-router"
 import { getFreelancersLocalFirst, syncFreelancersNow, deleteFreelancer, type FreelancerRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
+import { downloadFreelancersCsv } from "../../src/utils/freelancerCsvDownload"
 
 const BRAND_BLUE = "#2881FA"
-const CSV_URL = "https://spirospares.com/api/portal/admin/freelancers/csv"
+
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   approved: { bg: "#d1fae5", text: "#065f46" },
@@ -35,6 +36,7 @@ export default function FreelancersScreen() {
   const [search, setSearch] = useState("")
   const [selectedFreelancer, setSelectedFreelancer] = useState<FreelancerRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -93,10 +95,13 @@ export default function FreelancersScreen() {
   }
 
   const handleCsvDownload = async () => {
+    setDownloading(true)
     try {
-      await Linking.openURL(CSV_URL)
-    } catch {
-      Alert.alert("Error", "Could not open download link.")
+      await downloadFreelancersCsv(filtered)
+    } catch (err: any) {
+      Alert.alert("Download Failed", err?.message || "Could not create the freelancers CSV file.")
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -143,8 +148,9 @@ export default function FreelancersScreen() {
             </Text>
           </View>
           <View style={s.headerActions}>
-            <TouchableOpacity onPress={handleCsvDownload} style={s.csvBtn}>
-              <Text style={s.csvBtnText}>⬇ CSV</Text>
+            <TouchableOpacity onPress={handleCsvDownload} style={[s.csvBtn, (downloading || filtered.length === 0) && s.disabledBtn]} disabled={downloading || filtered.length === 0}>
+              {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
+              <Text style={s.csvBtnText}>{downloading ? "Preparing" : "CSV"}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
               <Text style={s.backText}>Back</Text>
@@ -303,12 +309,19 @@ const s = StyleSheet.create({
   headerSub: { marginTop: 4, fontSize: 13, color: "#64748b" },
   headerActions: { flexDirection: "row", gap: 8 },
   csvBtn: {
+    minWidth: 82,
+    height: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     backgroundColor: "#10b981",
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
   },
   csvBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  disabledBtn: { opacity: 0.5 },
   backBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0" },
   backText: { fontSize: 13, fontWeight: "500", color: "#64748b" },
 

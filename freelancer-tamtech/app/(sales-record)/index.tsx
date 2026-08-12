@@ -11,13 +11,16 @@ import {
   ActivityIndicator,
   Linking,
   StyleSheet,
+  Alert,
 } from "react-native"
+import { Download } from "lucide-react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import { getSalesHistoryLocalFirst, syncSalesHistoryNow, type SalesRecordItem } from "../../src/api/salesRecord"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { getFreelancerCardName } from "../../src/utils/salesDisplay"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
+import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
 
 // Types
 type SaleRecordRow = SalesRecordItem
@@ -48,6 +51,7 @@ export default function SalesRecordHome() {
   const [search, setSearch] = useState("")
   const [selectedRow, setSelectedRow] = useState<SaleRecordRow | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   const loadHistory = useCallback(async () => {
     try {
@@ -121,6 +125,17 @@ export default function SalesRecordHome() {
 
   const statusBg = (key: string) => STATUS_STYLES[key]?.bg || "#f1f5f9"
   const statusText = (key: string) => STATUS_STYLES[key]?.text || "#475569"
+
+  const handleDownloadCsv = useCallback(async () => {
+    setDownloading(true)
+    try {
+      await downloadSalesCsv(filteredRows, "Sales Record History")
+    } catch (err: any) {
+      Alert.alert("Download Failed", err?.message || "Could not create the sales history CSV file.")
+    } finally {
+      setDownloading(false)
+    }
+  }, [filteredRows])
 
   return (
     <View style={s.container}>
@@ -242,16 +257,22 @@ export default function SalesRecordHome() {
           {/* Modal Header */}
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Sales Record History</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setHistoryOpen(false)
-                setSelectedRow(null)
-                setSearch("")
-              }}
-              style={s.modalCloseBtn}
-            >
-              <Text style={s.modalCloseText}>Close</Text>
-            </TouchableOpacity>
+            <View style={s.modalActions}>
+              <TouchableOpacity onPress={handleDownloadCsv} style={[s.downloadBtn, (downloading || filteredRows.length === 0) && s.disabledBtn]} disabled={downloading || filteredRows.length === 0}>
+                {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
+                <Text style={s.downloadText}>{downloading ? "Preparing" : "CSV"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setHistoryOpen(false)
+                  setSelectedRow(null)
+                  setSearch("")
+                }}
+                style={s.modalCloseBtn}
+              >
+                <Text style={s.modalCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Search */}
@@ -506,6 +527,7 @@ const s = StyleSheet.create({
     paddingVertical: 16,
   },
   modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a" },
+  modalActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   modalCloseBtn: {
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -514,6 +536,9 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   modalCloseText: { fontSize: 12, fontWeight: "500", color: "#64748b" },
+  downloadBtn: { minWidth: 82, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#059669", paddingHorizontal: 12 },
+  downloadText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  disabledBtn: { opacity: 0.5 },
 
   searchWrap: { paddingHorizontal: 16, paddingVertical: 12 },
   searchInput: {

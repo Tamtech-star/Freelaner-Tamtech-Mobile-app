@@ -46,14 +46,22 @@ export function createFormDataFromPayload(payload: OfflineSubmissionPayload): Fo
 }
 
 async function pullChanges(): Promise<void> {
-  const [freelancersResponse, salesResponse] = await Promise.all([
+  const [freelancersResult, salesResult] = await Promise.allSettled([
     api.get<{ freelancers: FreelancerRow[] }>("/portal/admin/freelancers"),
     api.get<SalesHistoryResponse>("/sales-record/history"),
   ])
-  const freelancers = freelancersResponse.data.freelancers || []
-  const sales = salesResponse.data.items || []
   const now = new Date().toISOString()
-  await Promise.all([upsertFreelancers(freelancers, now), upsertSalesRecords(sales, now)])
+
+  if (freelancersResult.status === "fulfilled") {
+    await upsertFreelancers(freelancersResult.value.data.freelancers || [], now)
+  }
+  if (salesResult.status === "fulfilled") {
+    await upsertSalesRecords(salesResult.value.data.items || [], now)
+  }
+  if (freelancersResult.status === "rejected" && salesResult.status === "rejected") {
+    throw salesResult.reason
+  }
+
   await setSyncCursor("last_pull_at", now)
   notifyDataChanged()
 }
