@@ -21,6 +21,8 @@ import { COLORS, SHADOWS } from "../../src/constants/config"
 import { getFreelancerCardName } from "../../src/utils/salesDisplay"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
+import { SalesDateFilterControl } from "../../src/components/SalesDateFilterControl"
+import { applySalesDateFilter, DEFAULT_SALES_DATE_FILTER, type SalesDateFilter } from "../../src/utils/salesDateFilter"
 
 // Types
 type SaleRecordRow = SalesRecordItem
@@ -52,6 +54,7 @@ export default function SalesRecordHome() {
   const [selectedRow, setSelectedRow] = useState<SaleRecordRow | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [dateFilter, setDateFilter] = useState<SalesDateFilter>(DEFAULT_SALES_DATE_FILTER)
 
   const loadHistory = useCallback(async () => {
     try {
@@ -98,9 +101,10 @@ export default function SalesRecordHome() {
   }
 
   const filteredRows = useMemo(() => {
-    if (!search.trim()) return rows
+    const dateFiltered = applySalesDateFilter(rows, dateFilter)
+    if (!search.trim()) return dateFiltered
     const q = search.toLowerCase()
-    return rows.filter(
+    return dateFiltered.filter(
       (r) =>
         r.customer_name.toLowerCase().includes(q) ||
         r.conversion_code.toLowerCase().includes(q) ||
@@ -109,7 +113,7 @@ export default function SalesRecordHome() {
         r.sales_agent_name.toLowerCase().includes(q) ||
         r.freight.toLowerCase().includes(q)
     )
-  }, [rows, search])
+  }, [rows, search, dateFilter])
 
   const formatDate = (d: string) => {
     try {
@@ -289,6 +293,10 @@ export default function SalesRecordHome() {
           {/* Count */}
           <View style={s.countWrap}>
             <Text style={s.countText}>Total records: {filteredRows.length}</Text>
+          </View>
+
+          <View style={s.dateFilterWrap}>
+            <SalesDateFilterControl value={dateFilter} onChange={setDateFilter} availableDates={rows.map((row) => row.sale_date)} />
           </View>
 
           {/* List */}
@@ -555,6 +563,7 @@ const s = StyleSheet.create({
 
   countWrap: { paddingHorizontal: 16, paddingBottom: 8 },
   countText: { fontSize: 12, color: "#64748b" },
+  dateFilterWrap: { paddingHorizontal: 16, paddingBottom: 10 },
 
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   emptyText: { fontSize: 14, color: "#64748b" },

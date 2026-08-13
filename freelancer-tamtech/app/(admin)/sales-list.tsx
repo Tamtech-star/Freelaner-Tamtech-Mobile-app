@@ -19,6 +19,8 @@ import { COLORS, SHADOWS } from "../../src/constants/config"
 import { formatPaymentMode, getFreelancerName } from "../../src/utils/salesDisplay"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
+import { SalesDateFilterControl } from "../../src/components/SalesDateFilterControl"
+import { applySalesDateFilter, DEFAULT_SALES_DATE_FILTER, type SalesDateFilter } from "../../src/utils/salesDateFilter"
 
 const BRAND_BLUE = "#2881FA"
 
@@ -38,6 +40,7 @@ export default function SalesListScreen() {
   const [agentSearch, setAgentSearch] = useState("")
   const [selectedSale, setSelectedSale] = useState<ConvertedSaleRow | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [dateFilter, setDateFilter] = useState<SalesDateFilter>(DEFAULT_SALES_DATE_FILTER)
 
   const isFreelancer = filter === "freelancer"
 
@@ -103,7 +106,7 @@ export default function SalesListScreen() {
 
   // Filter by search text + agent search
   const filtered = useMemo(() => {
-    let result = sales
+    let result = applySalesDateFilter(sales, dateFilter)
 
     // Agent filter
     if (agentSearch.trim()) {
@@ -127,7 +130,7 @@ export default function SalesListScreen() {
     }
 
     return result
-  }, [sales, search, agentSearch])
+  }, [sales, search, agentSearch, dateFilter])
 
   const getTitle = () => {
     if (isFreelancer) return "Freelancer Lead Sales"
@@ -223,6 +226,10 @@ export default function SalesListScreen() {
               Showing {filtered.length} sale{filtered.length !== 1 ? "s" : ""} by "{agentSearch}"
             </Text>
           )}
+        </View>
+
+        <View style={s.dateFilterWrap}>
+          <SalesDateFilterControl value={dateFilter} onChange={setDateFilter} availableDates={sales.map((sale) => sale.sale_date)} />
         </View>
 
         {loading && (
@@ -402,6 +409,7 @@ const s = StyleSheet.create({
   chip: { backgroundColor: "#eff6ff", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: "#bfdbfe" },
   chipText: { fontSize: 12, color: BRAND_BLUE, fontWeight: "600" },
   filterTag: { fontSize: 11, color: "#10b981", marginTop: 6, fontWeight: "600" },
+  dateFilterWrap: { marginBottom: 14 },
 
   card: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 12, padding: 14, marginBottom: 10 },
   cardRow1: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

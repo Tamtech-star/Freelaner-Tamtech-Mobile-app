@@ -17,6 +17,7 @@ import { COLORS, SHADOWS } from "../../src/constants/config"
 import { insertPendingSalesRecord } from "../../src/offline/database"
 import { buildPendingSalesRecord } from "../../src/offline/syncCore"
 import { runSyncWorker, type OfflineSubmissionPayload } from "../../src/offline/syncWorker"
+import { compressImageForUpload } from "../../src/utils/imageCompression"
 
 //  Constants 
 const BIKE_MODELS = [
@@ -156,14 +157,16 @@ export default function SalesRecordForm() {
   )
 
   //  Process Asset Helper
-  const saveAsset = (fieldKey: string, asset: ImagePicker.ImagePickerAsset) => {
+  const saveAsset = async (fieldKey: string, asset: ImagePicker.ImagePickerAsset) => {
+    const compressed = await compressImageForUpload(
+      asset.uri,
+      asset.fileName || `${fieldKey}.jpg`,
+      asset.mimeType || "image/jpeg",
+      asset.width,
+    )
     setFiles((prev) => ({
       ...prev,
-      [fieldKey]: {
-        uri: asset.uri,
-        name: asset.fileName || `${fieldKey}.jpg`,
-        type: asset.mimeType || "image/jpeg",
-      },
+      [fieldKey]: compressed,
     }))
   }
 
@@ -187,7 +190,7 @@ export default function SalesRecordForm() {
                 quality: 0.8,
               })
               if (!result.canceled && result.assets?.[0]) {
-                saveAsset(fieldKey, result.assets[0])
+                await saveAsset(fieldKey, result.assets[0])
               }
             } catch {
               Alert.alert("Error", "Failed to open camera.")
@@ -204,7 +207,7 @@ export default function SalesRecordForm() {
                 quality: 0.8,
               })
               if (!result.canceled && result.assets?.[0]) {
-                saveAsset(fieldKey, result.assets[0])
+                await saveAsset(fieldKey, result.assets[0])
               }
             } catch {
               Alert.alert("Error", "Failed to pick file from gallery.")

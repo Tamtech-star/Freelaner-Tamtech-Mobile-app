@@ -1,9 +1,13 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getDefaultConfig } = require("expo/metro-config")
 
-/** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname)
 
-// Telling Expo to recognize and bundle .mjs files
-config.resolver.sourceExts.push('mjs');
+if (!config.resolver.sourceExts.includes("mjs")) {
+  config.resolver.sourceExts.push("mjs")
+}
 
-module.exports = config;
+if (!config.resolver.assetExts.includes("wasm")) {
+  config.resolver.assetExts.push("wasm")
+}
+
+module.exports = config

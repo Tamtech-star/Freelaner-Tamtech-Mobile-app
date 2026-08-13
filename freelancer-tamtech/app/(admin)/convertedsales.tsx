@@ -19,6 +19,8 @@ import { formatPaymentMode, getFreelancerName } from "../../src/utils/salesDispl
 import { Download } from "lucide-react-native"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
+import { SalesDateFilterControl } from "../../src/components/SalesDateFilterControl"
+import { applySalesDateFilter, DEFAULT_SALES_DATE_FILTER, type SalesDateFilter } from "../../src/utils/salesDateFilter"
 
 const BRAND_BLUE = "#2881FA"
 
@@ -37,6 +39,7 @@ export default function ConvertedSalesScreen() {
   const [search, setSearch] = useState("")
   const [selectedSale, setSelectedSale] = useState<ConvertedSaleRow | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [dateFilter, setDateFilter] = useState<SalesDateFilter>(DEFAULT_SALES_DATE_FILTER)
 
   const load = useCallback(async () => {
     try {
@@ -81,9 +84,10 @@ export default function ConvertedSalesScreen() {
   }
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return sales
+    const dateFiltered = applySalesDateFilter(sales, dateFilter)
+    if (!search.trim()) return dateFiltered
     const q = search.toLowerCase()
-    return sales.filter(
+    return dateFiltered.filter(
       (s) =>
         s.conversion_code.toLowerCase().includes(q) ||
         s.customer_name.toLowerCase().includes(q) ||
@@ -91,7 +95,7 @@ export default function ConvertedSalesScreen() {
         s.bike_model_sold.toLowerCase().includes(q) ||
         s.sales_invoice_number.toLowerCase().includes(q)
     )
-  }, [sales, search])
+  }, [sales, search, dateFilter])
 
   const formatDate = (d: string) => {
     try {
@@ -139,6 +143,10 @@ export default function ConvertedSalesScreen() {
             onChangeText={setSearch}
             style={s.searchInput}
           />
+        </View>
+
+        <View style={s.dateFilterWrap}>
+          <SalesDateFilterControl value={dateFilter} onChange={setDateFilter} availableDates={sales.map((sale) => sale.sale_date)} />
         </View>
 
         {loading && (
@@ -363,6 +371,7 @@ const s = StyleSheet.create({
   backText: { fontSize: 13, fontWeight: "500", color: "#64748b" },
 
   searchWrap: { marginBottom: 14 },
+  dateFilterWrap: { marginBottom: 14 },
   searchInput: {
     borderWidth: 1,
     borderColor: "#cbd5e1",
