@@ -18,6 +18,7 @@ type LocalSalesRow = SalesRecordItem & {
 }
 
 let databasePromise: Promise<SQLiteDatabase> | null = null
+let initializationPromise: Promise<SQLiteDatabase> | null = null
 
 export function getDatabase(): Promise<SQLiteDatabase> {
   if (!databasePromise) databasePromise = openDatabaseAsync("tamtech-offline.db")
@@ -25,12 +26,19 @@ export function getDatabase(): Promise<SQLiteDatabase> {
 }
 
 export async function initializeDatabase(): Promise<SQLiteDatabase> {
-  const db = await getDatabase()
-  await db.execAsync(`
+  if (initializationPromise) return initializationPromise
+  initializationPromise = (async () => {
+    const db = await getDatabase()
+    await db.execAsync(`
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS app_metadata (
       key TEXT PRIMARY KEY NOT NULL,
       value TEXT
+    );
+    CREATE TABLE IF NOT EXISTS cached_resources (
+      key TEXT PRIMARY KEY NOT NULL,
+      payload_json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS freelancers (
       id TEXT PRIMARY KEY NOT NULL,
@@ -80,8 +88,13 @@ export async function initializeDatabase(): Promise<SQLiteDatabase> {
     CREATE INDEX IF NOT EXISTS idx_sales_updated_at ON sales_records(updated_at);
     CREATE INDEX IF NOT EXISTS idx_freelancers_updated_at ON freelancers(updated_at);
     CREATE INDEX IF NOT EXISTS idx_materials_updated_at ON materials(updated_at);
-  `)
-  return db
+    `)
+    return db
+  })().catch((error) => {
+    initializationPromise = null
+    throw error
+  })
+  return initializationPromise
 }
 
 function salesParams(row: SalesRecordItem & { sync_status?: string; updated_at: string; payload_json?: string | null }) {
@@ -165,4 +178,26 @@ export async function getSyncCursor(key: string): Promise<string | null> {
 export async function setSyncCursor(key: string, value: string): Promise<void> {
   const db = await initializeDatabase()
   await db.runAsync("INSERT INTO app_metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", key, value)
+}
+
+export async function getCachedResource<T>(key: string): Promise<T | null> {
+  const db = await initializeDatabase()
+  const row = await db.getFirstAsync<{ payload_json: string }>("SELECT payload_json FROM cached_resources WHERE key = ?", key)
+  if (!row) return null
+  try {
+    return JSON.parse(row.payload_json) as T
+  } catch {
+    return null
+  }
+}
+
+export async function setCachedResource<T>(key: string, payload: T, updatedAt = new Date().toISOString()): Promise<void> {
+  const db = await initializeDatabase()
+  await db.runAsync(
+    "INSERT INTO cached_resources (key, payload_json, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET payload_json=excluded.payload_json, updated_at=excluded.updated_at",
+    key,
+    JSON.stringify(payload),
+    updatedAt,
+  )
+  await setSyncCursor(`resource:${key}`, updatedAt)
 }

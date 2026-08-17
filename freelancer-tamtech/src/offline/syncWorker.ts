@@ -12,6 +12,7 @@ import {
   upsertSalesRecords,
 } from "./database"
 import { shouldRunRemoteSync } from "./syncCore"
+import { isSyncCursorStale } from "./syncPolicy"
 
 export type PersistedFile = { uri: string; name: string; type: string }
 export type OfflineSubmissionPayload = Record<string, string | PersistedFile | null>
@@ -24,7 +25,7 @@ export function subscribeToOfflineData(listener: () => void): () => void {
   return () => dataListeners.delete(listener)
 }
 
-function notifyDataChanged(): void {
+export function notifyDataChanged(): void {
   for (const listener of dataListeners) listener()
 }
 
@@ -101,13 +102,19 @@ export function runSyncWorker(): Promise<{ pulled: boolean; pushed: number }> {
   return activeSync
 }
 
+export async function runSyncWorkerIfStale(): Promise<{ pulled: boolean; pushed: number }> {
+  const lastPullAt = await getSyncCursor("last_pull_at")
+  if (!isSyncCursorStale(lastPullAt)) return { pulled: false, pushed: 0 }
+  return runSyncWorker()
+}
+
 export function startSyncWorker(): () => void {
   let running = false
   const run = async () => {
     if (running) return
     running = true
     try {
-      await runSyncWorker()
+      await runSyncWorkerIfStale()
     } finally {
       running = false
     }
@@ -121,7 +128,7 @@ export function startSyncWorker(): () => void {
 
 export async function getCachedSalesThenSync(): Promise<ReturnType<typeof getLocalSalesRecords>> {
   const cached = await getLocalSalesRecords()
-  void runSyncWorker().catch(() => undefined)
+  void runSyncWorkerIfStale().catch(() => undefined)
   return cached
 }
 

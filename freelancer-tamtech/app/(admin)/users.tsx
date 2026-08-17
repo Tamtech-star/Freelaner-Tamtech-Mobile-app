@@ -12,7 +12,7 @@ import {
   Linking,
 } from "react-native"
 import { router } from "expo-router"
-import { getAdminUsers, type AdminUserRow } from "../../src/api/admin"
+import { getAdminUsersLocalFirst, syncAdminUsersNow, type AdminUserRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 const BRAND_BLUE = "#2881FA"
@@ -33,7 +33,7 @@ export default function AdminUsersScreen() {
   const load = useCallback(async () => {
     try {
       setError(null)
-      const data = await getAdminUsers()
+      const data = await getAdminUsersLocalFirst()
       setUsers(data)
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || "Failed to load admin users.")
@@ -47,8 +47,12 @@ export default function AdminUsersScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await load()
-  }, [load])
+    try {
+      setUsers(await syncAdminUsersNow())
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
   const handleCsvDownload = async () => {
     try {

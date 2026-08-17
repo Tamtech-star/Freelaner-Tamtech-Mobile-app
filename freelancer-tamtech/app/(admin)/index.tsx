@@ -11,7 +11,7 @@ import {
 import { router } from "expo-router"
 import { Search, BarChart3, Wallet, Users, ShieldUser } from "lucide-react-native"
 import { useAuthStore } from "../../src/store/authStore"
-import { getAdminDashboard } from "../../src/api/admin"
+import { getAdminDashboardLocalFirst, syncAdminDashboardNow } from "../../src/api/admin"
 import type { AdminMetrics } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
@@ -29,7 +29,7 @@ export default function AdminDashboardScreen() {
   const load = useCallback(async () => {
     try {
       setError(null)
-      const data = await getAdminDashboard()
+      const data = await getAdminDashboardLocalFirst()
       setMetrics(data.metrics)
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || "Failed to load dashboard.")
@@ -43,8 +43,12 @@ export default function AdminDashboardScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await load()
-  }, [load])
+    try {
+      setMetrics((await syncAdminDashboardNow()).metrics)
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
   const handleLogout = async () => {
     await logout()

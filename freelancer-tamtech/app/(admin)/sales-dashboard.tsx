@@ -10,7 +10,7 @@ import {
 } from "react-native"
 import { router } from "expo-router"
 import { BarChart3, Building2, Handshake } from "lucide-react-native"
-import { getAllSales, getConvertedSales } from "../../src/api/admin"
+import { getAllSalesLocalFirst, syncAllSalesNow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 const BRAND_BLUE = "#2881FA"
@@ -24,15 +24,12 @@ export default function SalesDashboardScreen() {
 
   const load = useCallback(async () => {
     try {
-      const [all, converted] = await Promise.all([
-        getAllSales(),
-        getConvertedSales(),
-      ])
+      const all = await getAllSalesLocalFirst()
       setTotalCount(all.length)
       setDirectCount(all.filter((s) => s.submission_type === "direct_sale").length)
       // Only count freelancer_lead submissions — backend may return other types like "trek"
       setFreelancerCount(
-        converted.filter((s) => s.submission_type === "freelancer_lead").length
+        all.filter((s) => s.submission_type === "freelancer_lead").length
       )
     } catch {
       // counts will remain null, handled in UI
@@ -44,9 +41,16 @@ export default function SalesDashboardScreen() {
 
   useEffect(() => { load() }, [load])
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true)
-    load()
+    try {
+      const all = await syncAllSalesNow()
+      setTotalCount(all.length)
+      setDirectCount(all.filter((sale) => sale.submission_type === "direct_sale").length)
+      setFreelancerCount(all.filter((sale) => sale.submission_type === "freelancer_lead").length)
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const fmt = (n: number | null) => (n !== null ? n.toLocaleString() : "...")

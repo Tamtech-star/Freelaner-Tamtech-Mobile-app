@@ -10,9 +10,12 @@ import {
 } from "react-native"
 import { router } from "expo-router"
 import {
-  getConversionRatio,
-  getCountyWise,
-  getReconciliation,
+  getConversionRatioLocalFirst,
+  getCountyWiseLocalFirst,
+  getReconciliationLocalFirst,
+  syncConversionRatioNow,
+  syncCountyWiseNow,
+  syncReconciliationNow,
   type ConversionRatio,
   type CountyWiseItem,
   type ReconciliationResponse,
@@ -37,7 +40,7 @@ export default function ReportsScreen() {
   const loadConversionTab = useCallback(async () => {
     try {
       setError(null)
-      const data = await getConversionRatio()
+      const data = await getConversionRatioLocalFirst()
       setRatio(data)
     } catch (err: any) {
       setError(err?.message || "Failed to load.")
@@ -50,7 +53,7 @@ export default function ReportsScreen() {
   const loadCountyTab = useCallback(async () => {
     try {
       setError(null)
-      const data = await getCountyWise()
+      const data = await getCountyWiseLocalFirst()
       setCounties(data)
     } catch (err: any) {
       setError(err?.message || "Failed to load.")
@@ -63,7 +66,7 @@ export default function ReportsScreen() {
   const loadReconTab = useCallback(async () => {
     try {
       setError(null)
-      const data = await getReconciliation()
+      const data = await getReconciliationLocalFirst()
       setRecon(data)
     } catch (err: any) {
       setError(err?.message || "Failed to load.")
@@ -83,9 +86,13 @@ export default function ReportsScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    if (activeTab === "conversion") await loadConversionTab()
-    if (activeTab === "county") await loadCountyTab()
-    if (activeTab === "reconciliation") await loadReconTab()
+    try {
+      if (activeTab === "conversion") setRatio(await syncConversionRatioNow())
+      if (activeTab === "county") setCounties(await syncCountyWiseNow())
+      if (activeTab === "reconciliation") setRecon(await syncReconciliationNow())
+    } finally {
+      setRefreshing(false)
+    }
   }, [activeTab])
 
   const TabBtn = ({ tab, label }: { tab: Tab; label: string }) => (

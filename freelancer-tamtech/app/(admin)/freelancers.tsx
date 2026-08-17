@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   StyleSheet,
+  FlatList,
 } from "react-native"
 import { Download } from "lucide-react-native"
 import { router } from "expo-router"
@@ -133,64 +134,42 @@ export default function FreelancersScreen() {
         <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
       </View>
 
-      <ScrollView
+      <FlatList
         style={s.scroll}
+        data={filtered}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.gradientStart} />
         }
-      >
-        <View style={s.headerRow}>
-          <View style={s.headerLeft}>
-            <Text style={s.headerTitle}>Freelancers</Text>
-            <Text style={s.headerSub}>
-              {freelancers.length} total | {active} active
-            </Text>
-          </View>
-          <View style={s.headerActions}>
-            <TouchableOpacity onPress={handleCsvDownload} style={[s.csvBtn, (downloading || filtered.length === 0) && s.disabledBtn]} disabled={downloading || filtered.length === 0}>
-              {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
-              <Text style={s.csvBtnText}>{downloading ? "Preparing" : "CSV"}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-              <Text style={s.backText}>Back</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Search */}
-        <View style={s.searchWrap}>
-          <TextInput
-            placeholder="Search by name, email or code..."
-            placeholderTextColor="#94a3b8"
-            value={search}
-            onChangeText={setSearch}
-            style={s.searchInput}
-          />
-        </View>
-
-        {loading && (
-          <View style={s.centerWrap}>
-            <ActivityIndicator size="large" color={COLORS.gradientStart} />
-          </View>
+        ListHeaderComponent={(
+          <>
+            <View style={s.headerRow}>
+              <View style={s.headerLeft}>
+                <Text style={s.headerTitle}>Freelancers</Text>
+                <Text style={s.headerSub}>{freelancers.length} total | {active} active</Text>
+              </View>
+              <View style={s.headerActions}>
+                <TouchableOpacity onPress={handleCsvDownload} style={[s.csvBtn, (downloading || filtered.length === 0) && s.disabledBtn]} disabled={downloading || filtered.length === 0}>
+                  {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
+                  <Text style={s.csvBtnText}>{downloading ? "Preparing" : "CSV"}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.back()} style={s.backBtn}><Text style={s.backText}>Back</Text></TouchableOpacity>
+              </View>
+            </View>
+            <View style={s.searchWrap}>
+              <TextInput placeholder="Search by name, email or code..." placeholderTextColor="#94a3b8" value={search} onChangeText={setSearch} style={s.searchInput} />
+            </View>
+            {loading && <View style={s.centerWrap}><ActivityIndicator size="large" color={COLORS.gradientStart} /></View>}
+            {error && <View style={s.errorWrap}><Text style={s.errorText}>{error}</Text><TouchableOpacity onPress={load} style={s.retryBtn}><Text style={s.retryBtnText}>Retry</Text></TouchableOpacity></View>}
+          </>
         )}
-
-        {error && (
-          <View style={s.errorWrap}>
-            <Text style={s.errorText}>{error}</Text>
-            <TouchableOpacity onPress={load} style={s.retryBtn}>
-              <Text style={s.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {!loading && filtered.length === 0 && (
-          <Text style={s.emptyText}>
-            {search ? "No freelancers match your search." : "No freelancers registered yet."}
-          </Text>
-        )}
-
-        {filtered.map((f) => {
+        ListEmptyComponent={!loading ? <Text style={s.emptyText}>{search ? "No freelancers match your search." : "No freelancers registered yet."}</Text> : null}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        renderItem={({ item: f }) => {
           const badge = STATUS_BADGE[f.registration_status] || { bg: "#f1f5f9", text: "#475569" }
           const isDeleting = deletingId === f.id
           return (
@@ -227,8 +206,8 @@ export default function FreelancersScreen() {
               </TouchableOpacity>
             </View>
           )
-        })}
-      </ScrollView>
+        }}
+      />
 
       {/* Detail Modal */}
       <Modal visible={!!selectedFreelancer} animationType="slide" transparent>

@@ -1,7 +1,25 @@
 import api from './client'
 import { enrichSalesDisplayFields } from '../utils/salesDisplay'
-import { deleteLocalFreelancer, getLocalFreelancers, getLocalSalesRecords } from '../offline/database'
-import { runSyncWorker } from '../offline/syncWorker'
+import { deleteLocalFreelancer, getCachedResource, getLocalFreelancers, getLocalSalesRecords, getSyncCursor, setCachedResource } from '../offline/database'
+import { notifyDataChanged, runSyncWorker, runSyncWorkerIfStale } from '../offline/syncWorker'
+import { isSyncCursorStale } from '../offline/syncPolicy'
+
+async function refreshResource<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  const data = await fetcher()
+  await setCachedResource(key, data)
+  notifyDataChanged()
+  return data
+}
+
+async function getResourceLocalFirst<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  const cached = await getCachedResource<T>(key)
+  const cursor = await getSyncCursor(`resource:${key}`)
+  if (cached !== null) {
+    if (isSyncCursorStale(cursor)) void refreshResource(key, fetcher).catch(() => undefined)
+    return cached
+  }
+  return refreshResource(key, fetcher)
+}
 
 //  Types 
 export interface AdminMetrics {
@@ -184,6 +202,9 @@ export async function getAdminDashboard(): Promise<AdminMetrics> {
   return res.data
 }
 
+export const getAdminDashboardLocalFirst = () => getResourceLocalFirst('admin-dashboard', getAdminDashboard)
+export const syncAdminDashboardNow = () => refreshResource('admin-dashboard', getAdminDashboard)
+
 //  Review Queue 
 
 export async function getReviewDuplicates(): Promise<DuplicateLeadItem[]> {
@@ -258,7 +279,7 @@ export async function getFreelancers(): Promise<FreelancerRow[]> {
 
 export async function getFreelancersLocalFirst(): Promise<FreelancerRow[]> {
   const cached = await getLocalFreelancers()
-  void runSyncWorker().catch(() => undefined)
+  void runSyncWorkerIfStale().catch(() => undefined)
   return cached
 }
 
@@ -283,6 +304,9 @@ export async function getAdminLeads(): Promise<LeadRow[]> {
   return res.data.leads || []
 }
 
+export const getAdminLeadsLocalFirst = () => getResourceLocalFirst('admin-leads', getAdminLeads)
+export const syncAdminLeadsNow = () => refreshResource('admin-leads', getAdminLeads)
+
 // Converted Sales 
 
 export async function getAllSales(): Promise<ConvertedSaleRow[]> {
@@ -295,7 +319,7 @@ export async function getAllSales(): Promise<ConvertedSaleRow[]> {
 
 export async function getAllSalesLocalFirst(): Promise<ConvertedSaleRow[]> {
   const cached = await getLocalSalesRecords()
-  void runSyncWorker().catch(() => undefined)
+  void runSyncWorkerIfStale().catch(() => undefined)
   return enrichSalesDisplayFields(cached as ConvertedSaleRow[], [])
 }
 
@@ -315,7 +339,7 @@ export async function getConvertedSales(): Promise<ConvertedSaleRow[]> {
 
 export async function getConvertedSalesLocalFirst(): Promise<ConvertedSaleRow[]> {
   const cached = await getLocalSalesRecords()
-  void runSyncWorker().catch(() => undefined)
+  void runSyncWorkerIfStale().catch(() => undefined)
   return enrichSalesDisplayFields(
     cached.filter((sale) => sale.submission_type === 'freelancer_lead') as ConvertedSaleRow[],
     [],
@@ -334,16 +358,25 @@ export async function getPaymentRecords(): Promise<PaymentRecordRow[]> {
   return res.data.items || []
 }
 
+export const getPaymentRecordsLocalFirst = () => getResourceLocalFirst('payment-records', getPaymentRecords)
+export const syncPaymentRecordsNow = () => refreshResource('payment-records', getPaymentRecords)
+
 // Reports 
 export async function getConversionRatio(): Promise<ConversionRatio> {
   const res = await api.get<ConversionRatio>('/portal/reports/conversion-ratio')
   return res.data
 }
 
+export const getConversionRatioLocalFirst = () => getResourceLocalFirst('report-conversion-ratio', getConversionRatio)
+export const syncConversionRatioNow = () => refreshResource('report-conversion-ratio', getConversionRatio)
+
 export async function getCountyWise(): Promise<CountyWiseItem[]> {
   const res = await api.get<{ items: CountyWiseItem[] }>('/portal/reports/county-wise')
   return res.data.items || []
 }
+
+export const getCountyWiseLocalFirst = () => getResourceLocalFirst('report-county-wise', getCountyWise)
+export const syncCountyWiseNow = () => refreshResource('report-county-wise', getCountyWise)
 
 export async function getReconciliation(
   month?: string
@@ -355,11 +388,17 @@ export async function getReconciliation(
   return res.data
 }
 
+export const getReconciliationLocalFirst = () => getResourceLocalFirst('report-reconciliation', () => getReconciliation())
+export const syncReconciliationNow = () => refreshResource('report-reconciliation', () => getReconciliation())
+
 //  Admin Users 
 export async function getAdminUsers(): Promise<AdminUserRow[]> {
   const res = await api.get<{ users: AdminUserRow[] }>('/admin/users')
   return res.data.users || []
 }
+
+export const getAdminUsersLocalFirst = () => getResourceLocalFirst('admin-users', getAdminUsers)
+export const syncAdminUsersNow = () => refreshResource('admin-users', getAdminUsers)
 
 export async function createAdminUser(data: {
   email: string

@@ -10,9 +10,10 @@ import {
   Alert,
   StyleSheet,
   Linking,
+  FlatList,
 } from "react-native"
 import { router } from "expo-router"
-import { getAdminLeads, type LeadRow } from "../../src/api/admin"
+import { getAdminLeadsLocalFirst, syncAdminLeadsNow, type LeadRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 const BRAND_BLUE = "#2881FA"
@@ -37,7 +38,7 @@ export default function LeadsScreen() {
   const load = useCallback(async () => {
     try {
       setError(null)
-      const data = await getAdminLeads()
+      const data = await getAdminLeadsLocalFirst()
       setLeads(data)
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || "Failed to load leads.")
@@ -51,8 +52,12 @@ export default function LeadsScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await load()
-  }, [load])
+    try {
+      setLeads(await syncAdminLeadsNow())
+    } finally {
+      setRefreshing(false)
+    }
+  }, [])
 
   const handleCsvDownload = async () => {
     try {
@@ -90,13 +95,19 @@ export default function LeadsScreen() {
         <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
       </View>
 
-      <ScrollView
+      <FlatList
         style={s.scroll}
+        data={filtered}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND_BLUE} />
         }
-      >
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+        removeClippedSubviews
+        ListHeaderComponent={<>
         <View style={s.headerRow}>
           <View style={s.headerLeft}>
             <Text style={s.headerTitle}>Total Leads</Text>
@@ -133,13 +144,9 @@ export default function LeadsScreen() {
           </View>
         )}
 
-        {!loading && filtered.length === 0 && (
-          <Text style={s.emptyText}>
-            {search ? "No leads match your search." : "No leads found."}
-          </Text>
-        )}
-
-        {filtered.map((item) => (
+        </>}
+        ListEmptyComponent={!loading ? <Text style={s.emptyText}>{search ? "No leads match your search." : "No leads found."}</Text> : null}
+        renderItem={({ item }) => (
           <View key={item.id} style={[s.card, SHADOWS.cardSm]}>
             <View style={s.cardRow1}>
               <Text style={s.codeText}>{item.lead_code}</Text>
@@ -180,8 +187,8 @@ export default function LeadsScreen() {
               </View>
             )}
           </View>
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   )
 }

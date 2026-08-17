@@ -1,6 +1,6 @@
 import api from './client'
 import { getLocalSalesRecords, upsertSalesRecords } from '../offline/database'
-import { runSyncWorker } from '../offline/syncWorker'
+import { runSyncWorker, runSyncWorkerIfStale } from '../offline/syncWorker'
 
 //  Types 
 export interface SalesRecordItem {
@@ -45,7 +45,7 @@ export async function fetchSalesHistory(): Promise<SalesRecordItem[]> {
 
 export async function getSalesHistoryLocalFirst(): Promise<SalesRecordItem[]> {
   const cached = await getLocalSalesRecords()
-  void runSyncWorker().catch(() => undefined)
+  void runSyncWorkerIfStale().catch(() => undefined)
   return cached
 }
 
