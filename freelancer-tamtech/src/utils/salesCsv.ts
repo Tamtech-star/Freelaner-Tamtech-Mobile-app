@@ -1,23 +1,19 @@
-import type { ConvertedSaleRow } from "../api/admin"
-import type { SalesRecordItem } from "../api/salesRecord"
-
-export type SalesCsvRow = Pick<
-  ConvertedSaleRow | SalesRecordItem,
-  | "conversion_code"
-  | "submission_type"
-  | "customer_name"
-  | "freelancer_name"
-  | "freight"
-  | "sales_agent_name"
-  | "sales_invoice_number"
-  | "bike_model_sold"
-  | "sale_date"
-  | "quantity"
-  | "commission_kes"
-  | "paid_kes"
-  | "payment_status"
-  | "payment_type"
->
+export type SalesCsvRow = {
+  conversion_code: string
+  submission_type: string
+  customer_name: string
+  freelancer_name?: string | null
+  freight: string
+  sales_agent_name: string
+  sales_invoice_number: string
+  bike_model_sold: string
+  sale_date: string
+  quantity: number
+  commission_kes: string
+  paid_kes: number
+  payment_status: string
+  payment_type?: string | null
+}
 
 const HEADERS = [
   "Conversion Code",
