@@ -3,6 +3,7 @@
 Freelancer-Tamtech is an Expo/React Native mobile client for Tamtech Tools Ltd. It provides role-based access for sales agents, administrators, and freelancers, together with offline sales-record capture and local caching of selected portal data.
 
 This README describes the mobile project in `freelancer-tamtech/`. It does not document the backend API implementation, the web portal, or the ignored `spirospares.referance/` copy.
+spirospares.referance is the directive  folder where the website mimic of it exists and where the backend API implementation exists. Make contact or alias with the spirospares Backend API folders if need for Backend chnages is required.
 
 ## Responsibilities
 
