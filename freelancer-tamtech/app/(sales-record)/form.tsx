@@ -11,6 +11,7 @@ import {
 } from "react-native"
 import { router } from "expo-router"
 import * as ImagePicker from "expo-image-picker"
+import { Directory, File, Paths } from "expo-file-system"
 import DropDownPicker from "react-native-dropdown-picker"
 import { useAuthStore } from "../../src/store/authStore"
 import { COLORS, SHADOWS } from "../../src/constants/config"
@@ -164,9 +165,13 @@ export default function SalesRecordForm() {
       asset.mimeType || "image/jpeg",
       asset.width,
     )
+    const outboxDirectory = new Directory(Paths.document, "sales-outbox")
+    outboxDirectory.create({ idempotent: true, intermediates: true })
+    const durableFile = new File(outboxDirectory, `${Date.now()}-${fieldKey}-${compressed.name}`)
+    new File(compressed.uri).copy(durableFile)
     setFiles((prev) => ({
       ...prev,
-      [fieldKey]: compressed,
+      [fieldKey]: { ...compressed, uri: durableFile.uri },
     }))
   }
 
@@ -307,6 +312,15 @@ export default function SalesRecordForm() {
         }
       }
 
+      const localDocuments = {
+        invoice_photo_url: typeof payload.invoicePhoto === "object" && payload.invoicePhoto ? payload.invoicePhoto.uri : null,
+        agreement_photo_url: typeof payload.salesAgreementPhoto === "object" && payload.salesAgreementPhoto ? payload.salesAgreementPhoto.uri : null,
+        id_doc_url: typeof payload.idDocument === "object" && payload.idDocument ? payload.idDocument.uri : null,
+        kra_doc_url: typeof payload.kraDocument === "object" && payload.kraDocument ? payload.kraDocument.uri : null,
+        bike_photo_url: typeof payload.bikePhoto === "object" && payload.bikePhoto ? payload.bikePhoto.uri : null,
+        chassis_photo_url: typeof payload.chassisPhoto === "object" && payload.chassisPhoto ? payload.chassisPhoto.uri : null,
+      }
+
       const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
       const queuedAt = new Date().toISOString()
       const pendingRecord = buildPendingSalesRecord(localId, {
@@ -319,12 +333,13 @@ export default function SalesRecordForm() {
         saleDate: form.saleDate,
         quantity: form.quantity,
         paymentType: form.paymentType,
+        localDocuments,
       }, queuedAt)
       pendingRecord.payload_json = JSON.stringify(payload)
       await insertPendingSalesRecord(pendingRecord)
       void runSyncWorker().catch(() => undefined)
 
-      setSuccess(`Sale saved on this device and queued for sync. Code: ${pendingRecord.conversion_code}`)
+      setSuccess("Sale saved on this device and queued for sync. It will receive the server conversion code after synchronization.")
       setPreview(null)
       setForm(INITIAL_FORM)
       setFiles({})

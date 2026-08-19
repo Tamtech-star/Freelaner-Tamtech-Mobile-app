@@ -10,6 +10,7 @@ export type PendingSalesFields = {
   saleDate: string
   quantity: string
   paymentType: string
+  localDocuments?: Partial<Pick<SalesRecordItem, "invoice_photo_url" | "agreement_photo_url" | "id_doc_url" | "kra_doc_url" | "bike_photo_url" | "chassis_photo_url">>
 }
 
 export type PendingSalesRecord = SalesRecordItem & {
@@ -44,12 +45,12 @@ export function buildPendingSalesRecord(
     payment_status: "pending",
     freelancer_name: null,
     payment_type: fields.paymentType || null,
-    invoice_photo_url: null,
-    agreement_photo_url: null,
-    id_doc_url: null,
-    kra_doc_url: null,
-    bike_photo_url: null,
-    chassis_photo_url: null,
+    invoice_photo_url: fields.localDocuments?.invoice_photo_url ?? null,
+    agreement_photo_url: fields.localDocuments?.agreement_photo_url ?? null,
+    id_doc_url: fields.localDocuments?.id_doc_url ?? null,
+    kra_doc_url: fields.localDocuments?.kra_doc_url ?? null,
+    bike_photo_url: fields.localDocuments?.bike_photo_url ?? null,
+    chassis_photo_url: fields.localDocuments?.chassis_photo_url ?? null,
     sync_status: "pending",
     updated_at: updatedAt,
     payload_json: JSON.stringify(fields),
