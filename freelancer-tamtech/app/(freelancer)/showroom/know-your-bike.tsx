@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Dimensions,
   Image,
@@ -76,6 +76,8 @@ function Hotspot({
 export default function KnowYourBikeScreen() {
   const [modelIndex, setModelIndex] = useState(0)
   const [selectedHotspot, setSelectedHotspot] = useState<BikeHotspot | null>(null)
+  const activeSoundRef = useRef<Audio.Sound | null>(null)
+  const soundRequestRef = useRef(0)
   const float = useSharedValue(0)
   const model = BIKE_MODELS[modelIndex]
 
@@ -101,22 +103,51 @@ export default function KnowYourBikeScreen() {
 
   const dots = useMemo(() => BIKE_MODELS.map((bike) => bike.id), [])
 
+  const stopHotspotSound = useCallback(async () => {
+    soundRequestRef.current += 1
+    const sound = activeSoundRef.current
+    activeSoundRef.current = null
+    if (!sound) return
+    try {
+      await sound.stopAsync()
+    } catch {
+      // The sound may already have completed or unloaded.
+    }
+    try {
+      await sound.unloadAsync()
+    } catch {
+      // Ignore cleanup errors during navigation/unmount.
+    }
+  }, [])
+
   const playHotspotSound = useCallback(async (hotspot: BikeHotspot) => {
+    await stopHotspotSound()
+    const requestId = soundRequestRef.current + 1
+    soundRequestRef.current = requestId
     try {
       const soundSource = hotspot.id === "engine"
         ? require("../../../assets/sounds/power.mp3")
         : require("../../../assets/sounds/core.mp3")
       const { sound } = await Audio.Sound.createAsync(
         soundSource,
-        { shouldPlay: true, volume: 0.22 },
+        { shouldPlay: false, volume: 0.22 },
       )
+      if (soundRequestRef.current !== requestId) {
+        await sound.unloadAsync()
+        return
+      }
+      activeSoundRef.current = sound
+      await sound.playAsync()
       sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) void sound.unloadAsync()
+        if (status.isLoaded && status.didJustFinish) {
+          activeSoundRef.current = null
+          void sound.unloadAsync()
+        }
       })
     } catch {
       // The visual interaction remains available if audio playback is unavailable.
     }
-  }, [])
+  }, [stopHotspotSound])
 
   const openHotspot = useCallback(
     (hotspot: BikeHotspot) => {
@@ -126,16 +157,25 @@ export default function KnowYourBikeScreen() {
     [playHotspotSound],
   )
 
-  const changeModel = (direction: -1 | 1) => {
+  const closeHotspot = useCallback(() => {
     setSelectedHotspot(null)
+    void stopHotspotSound()
+  }, [stopHotspotSound])
+
+  const changeModel = (direction: -1 | 1) => {
+    closeHotspot()
     setModelIndex((current) => (current + direction + BIKE_MODELS.length) % BIKE_MODELS.length)
   }
+
+  useEffect(() => () => {
+    void stopHotspotSound()
+  }, [stopHotspotSound])
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.iconButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { closeHotspot(); router.back() }} style={styles.iconButton}>
             <ChevronLeft size={23} color="#FFFFFF" />
           </Pressable>
           <View style={styles.headerCopy}>
@@ -197,13 +237,13 @@ export default function KnowYourBikeScreen() {
         {selectedHotspot ? (
           <>
             <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(180)} style={styles.scrim}>
-              <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedHotspot(null)} />
+              <Pressable style={StyleSheet.absoluteFill} onPress={closeHotspot} />
             </Animated.View>
             <Animated.View entering={SlideInDown.springify().damping(19)} exiting={SlideOutDown.duration(240)} style={styles.specPanel}>
               <View style={styles.specGrabber} />
               <View style={styles.specTopRow}>
                 <Text style={styles.specEyebrow}>{selectedHotspot.label} SYSTEM</Text>
-                <Pressable accessibilityRole="button" accessibilityLabel="Close specification" onPress={() => setSelectedHotspot(null)} style={styles.closeButton}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close specification" onPress={closeHotspot} style={styles.closeButton}>
                   <X size={20} color="#FFFFFF" />
                 </Pressable>
               </View>
