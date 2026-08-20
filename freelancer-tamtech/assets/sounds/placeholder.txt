@@ -1,1 +1,1 @@
-Placeholder for local sound assets.
+Note: replace with the final hotspot audio asset when available.

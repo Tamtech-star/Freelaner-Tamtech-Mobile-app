@@ -9,6 +9,7 @@ export default function FreelancerLayout() {
       }}
     >
       <Stack.Screen name="index" />
+      <Stack.Screen name="showroom" />
     </Stack>
   )
 }

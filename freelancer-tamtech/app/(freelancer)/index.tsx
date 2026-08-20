@@ -258,11 +258,12 @@ const ldS = StyleSheet.create({
 // MAIN COMPONENT
 
 export default function FreelancerDashboard() {
-  const { user, logout } = useAuthStore();
-  const sessionCode = user?.code || "";
-  const [codeInput, setCodeInput] = useState(user?.code || "");
-  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
-  const [dashLoading, setDashLoading] = useState(false);
+  const { user, logout } = useAuthStore()
+  const sessionCode = user?.code || ""
+  const [codeInput, setCodeInput] = useState(user?.code || "")
+  const [activeCode, setActiveCode] = useState(user?.code || "")
+  const [dashboard, setDashboard] = useState<DashboardPayload | null>(null)
+  const [dashLoading, setDashLoading] = useState(false)
   const [dashError, setDashError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("cards");
   const [leadView, setLeadView] = useState<"VIEW_SUMMARY" | "VIEW_LEAD_LIST" | "VIEW_LEAD_DETAIL">("VIEW_SUMMARY");
@@ -300,23 +301,31 @@ export default function FreelancerDashboard() {
   const [paymentSubCode, setPaymentSubCode] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async (code: string, silent = false) => {
+    const requestedCode = code.trim().toUpperCase();
+    if (!requestedCode) return;
     if (!silent) { setDashLoading(true); setDashError(null); setDashboard(null); }
     try {
-      const payload = await getFreelancerDashboard(code);
+      const payload = await getFreelancerDashboard(requestedCode);
       setDashboard(payload);
+      setActiveCode(requestedCode);
+      setCodeInput(requestedCode);
       if (!silent) setActiveTab("cards");
-    } catch {
-      if (!silent) setDashError("Failed to load dashboard.");
+    } catch (err: any) {
+      setDashError(err?.response?.data?.error || err?.message || "Failed to load dashboard.");
     } finally { if (!silent) setDashLoading(false); }
   }, []);
 
   const loadDetailData = useCallback(async (code: string, filter: string | null = null) => {
     setDetailLoading(true);
+    setDashError(null);
+    setDetailData(null);
     try {
       const payload = await getFreelancerDetails(code, filter);
       setDetailData(payload);
       setLeadView("VIEW_LEAD_LIST");
-    } catch { setDetailData({ leads: [] }); setLeadView("VIEW_LEAD_LIST"); }
+    } catch (err: any) {
+      setDashError(err?.response?.data?.error || err?.message || "Failed to load dashboard details.");
+    }
     finally { setDetailLoading(false); }
   }, []);
 
@@ -343,12 +352,12 @@ export default function FreelancerDashboard() {
         customerFullName:leadForm.customerFullName,customerIdNumber:leadForm.customerIdNumber,customerPhone:leadForm.customerPhone,
         bikeModel:leadForm.bikeModel,paymentType:leadForm.paymentType,quantityInterested:leadForm.quantityInterested,
         residenceLocation:leadForm.residenceLocation,county:leadForm.county,leadNotes:leadForm.leadNotes,
-        duplicateOverrideReason:leadForm.duplicateOverrideReason,freelancerCode:sessionCode,
+        duplicateOverrideReason:leadForm.duplicateOverrideReason,freelancerCode:activeCode,
       };
       await submitLead(payload);
       setWfMessage(`Lead created for ${leadForm.customerFullName}!`);
       setLeadForm({ customerFullName:"",customerIdNumber:"",customerPhone:"",bikeModel:"",paymentType:"",quantityInterested:"1",residenceLocation:"",county:"",leadNotes:"",duplicateOverrideReason:"" });
-      loadDashboard(sessionCode, true);
+      loadDashboard(activeCode, true);
     } catch (err: any) { setWfError(err.message); }
     finally { setWfSubmitting(false); }
   };
@@ -360,7 +369,7 @@ export default function FreelancerDashboard() {
     try {
       await acknowledgePayment({ paymentCode:code,receiptUrl:paymentReceiptUrl,notes:paymentNotes });
       setPaymentDone(true); setPaymentSubCode(code);
-      loadDashboard(sessionCode,true);
+      loadDashboard(activeCode,true);
     } catch (err:any) { setWfError(err.message); }
     finally { setWfSubmitting(false); }
   };
@@ -377,7 +386,7 @@ export default function FreelancerDashboard() {
     }
   }, [sessionCode]);
 
-  const handleReload = () => { const code=codeInput.trim().toUpperCase(); if(!code) return; loadDashboard(code); };
+  const handleReload = () => loadDashboard(codeInput);
 
   const metrics = dashboard?.metrics;
   const freelancer = dashboard?.freelancer;
@@ -390,7 +399,7 @@ export default function FreelancerDashboard() {
         contentContainerStyle={{ paddingBottom:50 }}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(sessionCode,true).finally(()=>setRefreshing(false)); }} tintColor={COLORS.gradientStart} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(activeCode,true).finally(()=>setRefreshing(false)); }} tintColor={COLORS.gradientStart} />}
       >
         {/* Header */}
         <View style={s.header}>
@@ -421,6 +430,16 @@ export default function FreelancerDashboard() {
           <TouchableOpacity onPress={handleReload} style={s.codeGo}><Text style={s.codeGoText}>Go</Text></TouchableOpacity>
         </View>
 
+        <TouchableOpacity onPress={() => router.push("/(freelancer)/showroom")} style={s.showroomEntry}>
+          <LinearGradient colors={["#07191D", "#102B30"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.showroomEntryGradient}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.showroomEntryEyebrow}>NEW / VIRTUAL SHOWROOM</Text>
+              <Text style={s.showroomEntryTitle}>Meet the bikes differently.</Text>
+            </View>
+            <Text style={s.showroomEntryArrow}>→</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+
         {dashError && <View style={s.errorBanner}><Text style={s.errorText}>{dashError}</Text></View>}
 
         {/*  TAB: CARDS  */}
@@ -431,9 +450,9 @@ export default function FreelancerDashboard() {
             {dashboard && leadView === "VIEW_SUMMARY" && (
               <>
                 <View style={s.metricGrid}>
-                  <MetricCard label="Total Leads" value={metrics?.total_leads_submitted??0} color="#0f172a" onPress={() => loadDetailData(sessionCode,"total_leads_submitted")} />
-                  <MetricCard label="Pending Processing" value={metrics?.pending_processing??0} color="#d97706" onPress={() => loadDetailData(sessionCode,"pending_processing")} />
-                  <MetricCard label="Paid Commissions" value={metrics?.paid_commissions??0} color="#059669" onPress={() => loadDetailData(sessionCode,"paid_commissions")} />
+                  <MetricCard label="Total Leads" value={metrics?.total_leads_submitted??0} color="#0f172a" onPress={() => loadDetailData(activeCode,"total_leads_submitted")} />
+                  <MetricCard label="Pending Processing" value={metrics?.pending_processing??0} color="#d97706" onPress={() => loadDetailData(activeCode,"pending_processing")} />
+                  <MetricCard label="Paid Commissions" value={metrics?.paid_commissions??0} color="#059669" onPress={() => loadDetailData(activeCode,"paid_commissions")} />
                   <MetricCard label="Total Paid (KES)" value={formatCurrency(metrics?.total_paid_kes??0)} color="#059669" />
                 </View>
                 <TouchableOpacity onPress={() => setShowPaymentHistory(!showPaymentHistory)} style={[s.paymentCard,SHADOWS.cardSm]}>
@@ -628,6 +647,11 @@ const s = StyleSheet.create({
   codeInput: { flex:1, borderWidth:1, borderColor:"#cbd5e1", borderRadius:8, paddingHorizontal:12, paddingVertical:8, fontSize:13, color:"#0f172a" },
   codeGo: { backgroundColor:COLORS.gradientStart, paddingHorizontal:20, paddingVertical:8, borderRadius:8, justifyContent:"center" },
   codeGoText: { color:"#fff", fontWeight:"700", fontSize:13 },
+  showroomEntry: { marginBottom:12, borderRadius:12, overflow:"hidden", borderWidth:1, borderColor:"#164E58" },
+  showroomEntryGradient: { minHeight:72, paddingHorizontal:16, paddingVertical:14, flexDirection:"row", alignItems:"center" },
+  showroomEntryEyebrow: { color:"#37E6FF", fontSize:9, fontWeight:"900", letterSpacing:1.4, marginBottom:5 },
+  showroomEntryTitle: { color:"#fff", fontSize:15, fontWeight:"800" },
+  showroomEntryArrow: { color:"#37E6FF", fontSize:26, fontWeight:"300", marginLeft:12 },
   loadingBox: { padding:24, alignItems:"center" },
   loadingText: { marginTop:8, fontSize:13, color:"#64748b" },
   errorBanner: { backgroundColor:"#fee2e2", borderRadius:8, padding:12, marginBottom:12 },

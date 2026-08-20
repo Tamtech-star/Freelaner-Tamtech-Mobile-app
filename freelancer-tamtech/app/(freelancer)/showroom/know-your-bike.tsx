@@ -1,0 +1,270 @@
+import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  Dimensions,
+  Image,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native"
+import { Audio } from "expo-av"
+import { LinearGradient } from "expo-linear-gradient"
+import { router } from "expo-router"
+import { ChevronLeft, ChevronRight, X } from "lucide-react-native"
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutDown,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated"
+import { BIKE_MODELS, type BikeHotspot } from "../../../src/data/bikeModels"
+
+const { width } = Dimensions.get("window")
+const STAGE_WIDTH = Math.min(width - 32, 720)
+const STAGE_HEIGHT = Math.min(Math.max(width * 1.08, 430), 620)
+
+function Hotspot({
+  hotspot,
+  onPress,
+}: {
+  hotspot: BikeHotspot
+  onPress: (hotspot: BikeHotspot) => void
+}) {
+  const pulse = useSharedValue(0)
+
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 1250, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    )
+  }, [pulse])
+
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.7, 0]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.7, 2.15]) }],
+  }))
+
+  const dotStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [0.92, 1.08]) }],
+  }))
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`View ${hotspot.title}`}
+      onPress={() => onPress(hotspot)}
+      style={[styles.hotspotTouch, { top: hotspot.top, left: hotspot.left }]}
+    >
+      <Animated.View style={[styles.hotspotHalo, haloStyle]} />
+      <Animated.View style={[styles.hotspotDot, dotStyle]}>
+        <View style={styles.hotspotCore} />
+      </Animated.View>
+      <Text style={styles.hotspotLabel}>{hotspot.label}</Text>
+    </Pressable>
+  )
+}
+
+export default function KnowYourBikeScreen() {
+  const [modelIndex, setModelIndex] = useState(0)
+  const [selectedHotspot, setSelectedHotspot] = useState<BikeHotspot | null>(null)
+  const float = useSharedValue(0)
+  const model = BIKE_MODELS[modelIndex]
+
+  useEffect(() => {
+    float.value = withRepeat(
+      withTiming(1, { duration: 3400, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    )
+  }, [float])
+
+  const bikeStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: interpolate(float.value, [0, 1], [-7, 9]) },
+      { scale: interpolate(float.value, [0, 1], [0.99, 1.015]) },
+    ],
+  }))
+
+  const shadowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(float.value, [0, 1], [0.52, 0.3]),
+    transform: [{ scaleX: interpolate(float.value, [0, 1], [1, 0.86]) }],
+  }))
+
+  const dots = useMemo(() => BIKE_MODELS.map((bike) => bike.id), [])
+
+  const playHotspotSound = useCallback(async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../../assets/sounds/hotspot-click.wav"),
+        { shouldPlay: true, volume: 0.22 },
+      )
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) void sound.unloadAsync()
+      })
+    } catch {
+      // The visual interaction remains available if audio playback is unavailable.
+    }
+  }, [])
+
+  const openHotspot = useCallback(
+    (hotspot: BikeHotspot) => {
+      setSelectedHotspot(hotspot)
+      void playHotspotSound()
+    },
+    [playHotspotSound],
+  )
+
+  const changeModel = (direction: -1 | 1) => {
+    setSelectedHotspot(null)
+    setModelIndex((current) => (current + direction + BIKE_MODELS.length) % BIKE_MODELS.length)
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.screen}>
+        <View style={styles.header}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.iconButton}>
+            <ChevronLeft size={23} color="#FFFFFF" />
+          </Pressable>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerEyebrow}>KNOW YOUR BIKE</Text>
+            <Text style={styles.headerTitle}>Studio view</Text>
+          </View>
+          <View style={styles.headerIndex}>
+            <Text style={styles.headerIndexText}>{String(modelIndex + 1).padStart(2, "0")}</Text>
+            <Text style={styles.headerIndexTotal}>/{String(BIKE_MODELS.length).padStart(2, "0")}</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.stage, { width: STAGE_WIDTH, height: STAGE_HEIGHT }]}>
+            <LinearGradient
+              colors={["#10242A", "#091013", "#000000"]}
+              locations={[0, 0.54, 1]}
+              style={styles.spotlight}
+            />
+            <View style={styles.studioGrid} />
+            <Animated.View style={[styles.bikeShadow, shadowStyle]} />
+            <Animated.View key={model.id} entering={FadeIn.duration(420)} style={[styles.bikeFrame, bikeStyle]}>
+              <Image source={model.image} style={styles.bikeImage} resizeMode="contain" />
+            </Animated.View>
+            {model.hotspots.map((hotspot) => (
+              <Hotspot key={`${model.id}-${hotspot.id}`} hotspot={hotspot} onPress={openHotspot} />
+            ))}
+            <View style={styles.tapHint}>
+              <View style={styles.tapHintDot} />
+              <Text style={styles.tapHintText}>TAP A GLOW POINT</Text>
+            </View>
+          </View>
+
+          <View style={styles.modelMeta}>
+            <Text style={styles.modelName}>{model.name}</Text>
+            <Text style={styles.modelTagline}>{model.tagline}</Text>
+            <Text style={styles.modelPrice}>{model.price}</Text>
+          </View>
+
+          <View style={styles.modelControls}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Previous bike" onPress={() => changeModel(-1)} style={styles.modelButton}>
+              <ChevronLeft size={22} color="#FFFFFF" />
+            </Pressable>
+            <View style={styles.pagination}>
+              {dots.map((id, index) => (
+                <View key={id} style={[styles.pageDot, index === modelIndex && styles.pageDotActive]} />
+              ))}
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Next bike" onPress={() => changeModel(1)} style={styles.modelButton}>
+              <ChevronRight size={22} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </ScrollView>
+
+        {selectedHotspot ? (
+          <>
+            <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(180)} style={styles.scrim}>
+              <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedHotspot(null)} />
+            </Animated.View>
+            <Animated.View entering={SlideInDown.springify().damping(19)} exiting={SlideOutDown.duration(240)} style={styles.specPanel}>
+              <View style={styles.specGrabber} />
+              <View style={styles.specTopRow}>
+                <Text style={styles.specEyebrow}>{selectedHotspot.label} SYSTEM</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close specification" onPress={() => setSelectedHotspot(null)} style={styles.closeButton}>
+                  <X size={20} color="#FFFFFF" />
+                </Pressable>
+              </View>
+              <Text style={styles.specTitle}>{selectedHotspot.title}</Text>
+              <Text style={styles.specDescription}>{selectedHotspot.description}</Text>
+              <View style={styles.specDivider} />
+              <View style={styles.specFooter}>
+                <Text style={styles.specFooterLabel}>MODEL</Text>
+                <Text style={styles.specFooterValue}>{model.name}</Text>
+              </View>
+            </Animated.View>
+          </>
+        ) : null}
+      </View>
+    </SafeAreaView>
+  )
+}
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#000000" },
+  screen: { flex: 1, backgroundColor: "#000000" },
+  header: { height: 78, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: "#1E1E1E" },
+  iconButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#292929", backgroundColor: "#090909" },
+  headerCopy: { flex: 1, marginLeft: 14 },
+  headerEyebrow: { color: "#37E6FF", fontSize: 9, fontWeight: "900", letterSpacing: 1.7 },
+  headerTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", marginTop: 3 },
+  headerIndex: { flexDirection: "row", alignItems: "baseline" },
+  headerIndexText: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
+  headerIndexTotal: { color: "#5E6468", fontSize: 11, fontWeight: "700" },
+  scroll: { flex: 1 },
+  scrollContent: { alignItems: "center", paddingTop: 16, paddingBottom: 40 },
+  stage: { borderWidth: 1, borderColor: "#20282A", backgroundColor: "#020303", overflow: "hidden" },
+  spotlight: { ...StyleSheet.absoluteFillObject },
+  studioGrid: { position: "absolute", left: "10%", right: "10%", bottom: "12%", height: 1, backgroundColor: "#31525B" },
+  bikeFrame: { position: "absolute", top: "12%", left: "4%", right: "4%", bottom: "14%", alignItems: "center", justifyContent: "center" },
+  bikeImage: { width: "100%", height: "100%" },
+  bikeShadow: { position: "absolute", width: "60%", height: 22, borderRadius: 22, backgroundColor: "#000000", bottom: "13%", left: "20%", shadowColor: "#000000", shadowOpacity: 0.9, shadowRadius: 18 },
+  hotspotTouch: { position: "absolute", width: 74, height: 74, marginLeft: -37, marginTop: -37, alignItems: "center", justifyContent: "center" },
+  hotspotHalo: { position: "absolute", width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: "#37E6FF", backgroundColor: "#37E6FF33" },
+  hotspotDot: { width: 23, height: 23, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: "#021215", borderWidth: 1, borderColor: "#9AF4FF", shadowColor: "#37E6FF", shadowOpacity: 1, shadowRadius: 12, elevation: 8 },
+  hotspotCore: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#FFFFFF" },
+  hotspotLabel: { position: "absolute", top: 53, color: "#C7F9FF", fontSize: 8, fontWeight: "900", letterSpacing: 1.2, backgroundColor: "#000000B8", paddingHorizontal: 5, paddingVertical: 2 },
+  tapHint: { position: "absolute", left: 14, bottom: 14, flexDirection: "row", alignItems: "center", gap: 7 },
+  tapHintDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#37E6FF" },
+  tapHintText: { color: "#7D8B8F", fontSize: 8, fontWeight: "900", letterSpacing: 1.25 },
+  modelMeta: { width: STAGE_WIDTH, paddingTop: 24, paddingHorizontal: 4 },
+  modelName: { color: "#FFFFFF", fontSize: 30, lineHeight: 34, fontWeight: "900" },
+  modelTagline: { color: "#858B90", fontSize: 14, lineHeight: 21, marginTop: 7 },
+  modelPrice: { color: "#37E6FF", fontSize: 16, fontWeight: "800", marginTop: 13 },
+  modelControls: { width: STAGE_WIDTH, marginTop: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  modelButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#2C2C2C", backgroundColor: "#090909" },
+  pagination: { flexDirection: "row", alignItems: "center", gap: 8 },
+  pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#333333" },
+  pageDotActive: { width: 28, backgroundColor: "#37E6FF" },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "#000000B8", zIndex: 20 },
+  specPanel: { position: "absolute", zIndex: 30, left: 12, right: 12, bottom: 12, padding: 24, backgroundColor: "#101415F7", borderWidth: 1, borderColor: "#3A4A4E" },
+  specGrabber: { width: 46, height: 3, backgroundColor: "#596367", alignSelf: "center", marginBottom: 22 },
+  specTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  specEyebrow: { color: "#37E6FF", fontSize: 10, fontWeight: "900", letterSpacing: 1.7 },
+  closeButton: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#353B3D" },
+  specTitle: { color: "#FFFFFF", fontSize: 27, fontWeight: "900", marginTop: 20 },
+  specDescription: { color: "#A7AFB2", fontSize: 15, lineHeight: 23, marginTop: 10 },
+  specDivider: { height: 1, backgroundColor: "#2A3032", marginVertical: 22 },
+  specFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  specFooterLabel: { color: "#626B6E", fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
+  specFooterValue: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+})
