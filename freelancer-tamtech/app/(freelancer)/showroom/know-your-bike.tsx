@@ -101,10 +101,13 @@ export default function KnowYourBikeScreen() {
 
   const dots = useMemo(() => BIKE_MODELS.map((bike) => bike.id), [])
 
-  const playHotspotSound = useCallback(async () => {
+  const playHotspotSound = useCallback(async (hotspot: BikeHotspot) => {
     try {
+      const soundSource = hotspot.id === "engine"
+        ? require("../../../assets/sounds/power.mp3")
+        : require("../../../assets/sounds/core.mp3")
       const { sound } = await Audio.Sound.createAsync(
-        require("../../../assets/sounds/hotspot-click.wav"),
+        soundSource,
         { shouldPlay: true, volume: 0.22 },
       )
       sound.setOnPlaybackStatusUpdate((status) => {
@@ -118,7 +121,7 @@ export default function KnowYourBikeScreen() {
   const openHotspot = useCallback(
     (hotspot: BikeHotspot) => {
       setSelectedHotspot(hotspot)
-      void playHotspotSound()
+      void playHotspotSound(hotspot)
     },
     [playHotspotSound],
   )
