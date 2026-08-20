@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
+  Image,
   LayoutAnimation,
   Platform,
   Pressable,
@@ -10,14 +11,22 @@ import {
   UIManager,
   View,
 } from "react-native"
+import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
 import { router } from "expo-router"
-import { ChevronLeft, ChevronDown, Check, Percent, WalletCards } from "lucide-react-native"
+import { ChevronDown, ChevronLeft, Check, Percent, WalletCards, X } from "lucide-react-native"
 import Animated, {
   Easing,
+  FadeIn,
+  FadeOut,
   interpolate,
+  runOnJS,
+  SlideInDown,
+  SlideOutDown,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated"
 
@@ -25,14 +34,18 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true)
 }
 
+type FinancingId = "hire-purchase" | "cash-loan"
+
 type FinancingOption = {
-  id: "hire-purchase" | "cash-loan"
+  id: FinancingId
   eyebrow: string
   title: string
   summary: string
   accent: string
   icon: typeof WalletCards
   details: Array<{ label: string; value: string }>
+  guideIntro: string
+  guidePoints: string[]
 }
 
 const OPTIONS: FinancingOption[] = [
@@ -49,6 +62,8 @@ const OPTIONS: FinancingOption[] = [
       { label: "Indicative interest", value: "From 12% p.a." },
       { label: "Best for", value: "Predictable monthly planning" },
     ],
+    guideIntro: "Hire Purchase is designed to help you start riding while spreading the balance over manageable monthly payments.",
+    guidePoints: ["Begin with a deposit from 20%.", "Choose a repayment period between 12 and 36 months.", "Your final rate is confirmed after lender assessment."],
   },
   {
     id: "cash-loan",
@@ -63,15 +78,28 @@ const OPTIONS: FinancingOption[] = [
       { label: "Indicative interest", value: "Subject to lender review" },
       { label: "Best for", value: "Fast, adaptable financing" },
     ],
+    guideIntro: "Cash Loan financing gives you a direct route to purchase while keeping the repayment structure adaptable to your plan.",
+    guidePoints: ["Deposit requirements are flexible.", "Repay over a 6 to 24 month period.", "The lender confirms the final interest and offer."],
   },
 ]
 
-function FinancingCard({ option, expanded, onPress }: { option: FinancingOption; expanded: boolean; onPress: () => void }) {
+function FinancingCard({
+  option,
+  expanded,
+  onPress,
+}: {
+  option: FinancingOption
+  expanded: boolean
+  onPress: () => void
+}) {
   const progress = useSharedValue(expanded ? 1 : 0)
   const Icon = option.icon
 
   useEffect(() => {
-    progress.value = withTiming(expanded ? 1 : 0, { duration: 420, easing: Easing.out(Easing.cubic) })
+    progress.value = withTiming(expanded ? 1 : 0, {
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+    })
   }, [expanded, progress])
 
   const iconStyle = useAnimatedStyle(() => ({
@@ -126,51 +154,220 @@ function FinancingCard({ option, expanded, onPress }: { option: FinancingOption;
 }
 
 export default function FinancingScreen() {
-  const [expanded, setExpanded] = useState<FinancingOption["id"] | null>("hire-purchase")
+  const [expanded, setExpanded] = useState<FinancingId | null>(null)
+  const [guideVisible, setGuideVisible] = useState(false)
+  const [guideOption, setGuideOption] = useState<FinancingOption | null>(null)
+  const avatarEntrance = useSharedValue(350)
+  const avatarOpacity = useSharedValue(0)
+  const avatarIdle = useSharedValue(0)
+  const bubbleScale = useSharedValue(0)
+  const bubbleOpacity = useSharedValue(0)
+  const clickSoundRef = useRef<Audio.Sound | null>(null)
+  const narrationSoundRef = useRef<Audio.Sound | null>(null)
+  const animationTokenRef = useRef(0)
 
-  const toggle = (id: FinancingOption["id"]) => {
+  const stopSound = useCallback(async (soundRef: React.MutableRefObject<Audio.Sound | null>) => {
+    const sound = soundRef.current
+    soundRef.current = null
+    if (!sound) return
+    try {
+      await sound.stopAsync()
+    } catch {
+      // The sound may already have completed.
+    }
+    try {
+      await sound.unloadAsync()
+    } catch {
+      // Cleanup must remain safe during navigation and unmount.
+    }
+  }, [])
+
+  const stopGuideAudio = useCallback(async () => {
+    await Promise.all([stopSound(clickSoundRef), stopSound(narrationSoundRef)])
+  }, [stopSound])
+
+  const playClick = useCallback(async () => {
+    await stopSound(clickSoundRef)
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../../assets/sounds/click.wav"),
+        { shouldPlay: true, volume: 0.35 },
+      )
+      clickSoundRef.current = sound
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          clickSoundRef.current = null
+          void sound.unloadAsync()
+        }
+      })
+    } catch {
+      // The guide remains usable if a device cannot play the click effect.
+    }
+  }, [stopSound])
+
+  const playNarration = useCallback(async (token: number) => {
+    if (token !== animationTokenRef.current) return
+    await stopSound(narrationSoundRef)
+    if (token !== animationTokenRef.current) return
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../../assets/sounds/financing-speech.mp3"),
+        { shouldPlay: true, volume: 0.8 },
+      )
+      if (token !== animationTokenRef.current) {
+        await sound.unloadAsync()
+        return
+      }
+      narrationSoundRef.current = sound
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          narrationSoundRef.current = null
+          void sound.unloadAsync()
+        }
+      })
+    } catch {
+      // The speech bubble remains available if narration playback is unavailable.
+    }
+  }, [stopSound])
+
+  const startGuideMotion = useCallback((token: number) => {
+    if (token !== animationTokenRef.current) return
+    avatarIdle.value = withRepeat(
+      withSequence(
+        withTiming(-4, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+        withTiming(4, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      true,
+    )
+    bubbleScale.value = withTiming(1, { duration: 420, easing: Easing.out(Easing.back(1.35)) })
+    bubbleOpacity.value = withTiming(1, { duration: 260 })
+    void playNarration(token)
+  }, [avatarIdle, bubbleOpacity, bubbleScale, playNarration])
+
+  const avatarStyle = useAnimatedStyle(() => ({
+    opacity: avatarOpacity.value,
+    transform: [
+      { translateX: avatarEntrance.value },
+      { translateY: avatarIdle.value },
+    ],
+  }))
+
+  const bubbleStyle = useAnimatedStyle(() => ({
+    opacity: bubbleOpacity.value,
+    transform: [{ scale: bubbleScale.value }],
+  }))
+
+  const closeGuide = useCallback(() => {
+    animationTokenRef.current += 1
+    setGuideVisible(false)
+    setGuideOption(null)
+    avatarIdle.value = withTiming(0, { duration: 220 })
+    bubbleScale.value = withTiming(0, { duration: 180 })
+    bubbleOpacity.value = withTiming(0, { duration: 180 })
+    avatarOpacity.value = withTiming(0, { duration: 260 })
+    avatarEntrance.value = withTiming(350, { duration: 300, easing: Easing.in(Easing.cubic) })
+    void stopGuideAudio()
+  }, [avatarEntrance, avatarIdle, avatarOpacity, bubbleOpacity, bubbleScale, stopGuideAudio])
+
+  const openOption = useCallback((option: FinancingOption) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
-    setExpanded((current) => (current === id ? null : id))
-  }
+    const token = animationTokenRef.current + 1
+    animationTokenRef.current = token
+    void stopGuideAudio()
+    void playClick()
+    setExpanded((current) => (current === option.id ? null : option.id))
+    setGuideOption(option)
+    setGuideVisible(true)
+    avatarIdle.value = withTiming(0, { duration: 120 })
+    bubbleScale.value = withTiming(0, { duration: 140 })
+    bubbleOpacity.value = withTiming(0, { duration: 140 })
+    avatarEntrance.value = 350
+    avatarOpacity.value = 0
+    avatarOpacity.value = withTiming(1, { duration: 260 })
+    avatarEntrance.value = withTiming(0, { duration: 760, easing: Easing.out(Easing.cubic) })
+    setTimeout(() => startGuideMotion(token), 780)
+  }, [avatarEntrance, avatarIdle, avatarOpacity, bubbleOpacity, bubbleScale, playClick, startGuideMotion, stopGuideAudio])
+
+  const toggle = useCallback((option: FinancingOption) => {
+    if (expanded === option.id) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
+      setExpanded(null)
+      closeGuide()
+      return
+    }
+    openOption(option)
+  }, [closeGuide, expanded, openOption])
+
+  useEffect(() => () => {
+    animationTokenRef.current += 1
+    void stopGuideAudio()
+  }, [stopGuideAudio])
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.topBar}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={23} color="#FFFFFF" />
-          </Pressable>
-          <Text style={styles.topBarLabel}>HOW TO PURCHASE</Text>
-          <View style={styles.topBarRule} />
-        </View>
+      <View style={styles.screen}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.topBar}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { closeGuide(); router.back() }} style={styles.backButton}>
+              <ChevronLeft size={23} color="#FFFFFF" />
+            </Pressable>
+            <Text style={styles.topBarLabel}>HOW TO PURCHASE</Text>
+            <View style={styles.topBarRule} />
+          </View>
 
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>OWNERSHIP, ON YOUR TERMS</Text>
-          <Text style={styles.title}>Make the next move.</Text>
-          <Text style={styles.subtitle}>
-            Choose a route that fits the way you want to ride. Expand an option to see the essentials.
-          </Text>
-        </View>
+          <View style={styles.hero}>
+            <Text style={styles.eyebrow}>OWNERSHIP, ON YOUR TERMS</Text>
+            <Text style={styles.title}>Make the next move.</Text>
+            <Text style={styles.subtitle}>Choose a route that fits the way you want to ride. Your guide will walk you through the essentials.</Text>
+          </View>
 
-        <View style={styles.options}>
-          {OPTIONS.map((option) => (
-            <FinancingCard key={option.id} option={option} expanded={expanded === option.id} onPress={() => toggle(option.id)} />
-          ))}
-        </View>
+          <View style={styles.options}>
+            {OPTIONS.map((option) => (
+              <FinancingCard key={option.id} option={option} expanded={expanded === option.id} onPress={() => toggle(option)} />
+            ))}
+          </View>
 
-        <View style={styles.note}>
-          <Text style={styles.noteTitle}>A considered purchase</Text>
-          <Text style={styles.noteBody}>
-            Rates and deposits are indicative. Your final offer depends on the lender assessment and selected motorcycle.
-          </Text>
-        </View>
-      </ScrollView>
+          <View style={styles.note}>
+            <Text style={styles.noteTitle}>A considered purchase</Text>
+            <Text style={styles.noteBody}>Rates and deposits are indicative. Your final offer depends on the lender assessment and selected motorcycle.</Text>
+          </View>
+        </ScrollView>
+
+        {guideVisible && guideOption ? (
+          <View pointerEvents="box-none" style={styles.guideLayer}>
+            <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(180)} style={styles.guideScrim} pointerEvents="none" />
+            <Animated.View style={[styles.speechBubble, bubbleStyle]}>
+              <View style={[styles.speechAccent, { backgroundColor: guideOption.accent }]} />
+              <View style={styles.speechHeader}>
+                <Text style={[styles.speechEyebrow, { color: guideOption.accent }]}>YOUR GUIDE SAYS</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close financing guide" onPress={closeGuide} style={styles.speechClose}>
+                  <X size={16} color="#FFFFFF" />
+                </Pressable>
+              </View>
+              <Text style={styles.speechIntro}>{guideOption.guideIntro}</Text>
+              <View style={styles.speechPoints}>
+                {guideOption.guidePoints.map((point) => (
+                  <View key={point} style={styles.speechPointRow}>
+                    <View style={[styles.speechPoint, { backgroundColor: guideOption.accent }]} />
+                    <Text style={styles.speechPointText}>{point}</Text>
+                  </View>
+                ))}
+              </View>
+            </Animated.View>
+            <Animated.View style={[styles.avatarWrap, avatarStyle]} pointerEvents="none">
+              <Image source={require("../../../assets/images/guide/guide-pointing.png")} style={styles.avatar} resizeMode="contain" />
+            </Animated.View>
+          </View>
+        ) : null}
+      </View>
     </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#000000" },
+  screen: { flex: 1, backgroundColor: "#000000" },
   container: { flex: 1, backgroundColor: "#000000" },
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 48 },
   topBar: { flexDirection: "row", alignItems: "center", gap: 13 },
@@ -200,4 +397,18 @@ const styles = StyleSheet.create({
   note: { borderLeftWidth: 2, borderLeftColor: "#37E6FF", paddingLeft: 15, marginTop: 38 },
   noteTitle: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
   noteBody: { color: "#737B7E", fontSize: 12, lineHeight: 19, marginTop: 5 },
+  guideLayer: { ...StyleSheet.absoluteFillObject, zIndex: 10 },
+  guideScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "#00000055" },
+  avatarWrap: { position: "absolute", right: -26, bottom: 10, width: 205, height: 285, zIndex: 12, alignItems: "center", justifyContent: "flex-end" },
+  avatar: { width: "100%", height: "100%" },
+  speechBubble: { position: "absolute", right: 156, bottom: 178, width: 220, zIndex: 13, padding: 16, paddingLeft: 20, backgroundColor: "#121A1BF5", borderWidth: 1, borderColor: "#3A5558", shadowColor: "#000000", shadowOpacity: 0.45, shadowRadius: 18, elevation: 12 },
+  speechAccent: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
+  speechHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  speechEyebrow: { fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
+  speechClose: { width: 26, height: 26, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#354244" },
+  speechIntro: { color: "#E3E8E8", fontSize: 12, lineHeight: 18, marginTop: 10 },
+  speechPoints: { gap: 8, marginTop: 12 },
+  speechPointRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  speechPoint: { width: 5, height: 5, borderRadius: 3, marginTop: 6 },
+  speechPointText: { flex: 1, color: "#AAB5B6", fontSize: 11, lineHeight: 16 },
 })
