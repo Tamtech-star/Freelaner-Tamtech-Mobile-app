@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import {
   Dimensions,
   Pressable,
@@ -8,8 +8,9 @@ import {
   Text,
   View,
 } from "react-native"
+import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { Bike, ChevronLeft, ChevronRight, Landmark } from "lucide-react-native"
 import Animated, {
   Easing,
@@ -45,7 +46,15 @@ const EXPERIENCES = [
   },
 ]
 
-function ShowroomCard({ item, index }: { item: (typeof EXPERIENCES)[number]; index: number }) {
+function ShowroomCard({
+  item,
+  index,
+  onSelect,
+}: {
+  item: (typeof EXPERIENCES)[number]
+  index: number
+  onSelect: (route: (typeof EXPERIENCES)[number]["route"]) => void
+}) {
   const pulse = useSharedValue(0)
 
   useEffect(() => {
@@ -74,7 +83,7 @@ function ShowroomCard({ item, index }: { item: (typeof EXPERIENCES)[number]; ind
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={item.title}
-      onPress={() => router.push(item.route)}
+      onPress={() => onSelect(item.route)}
       style={({ pressed }) => [styles.cardShell, pressed && styles.cardPressed]}
     >
       <LinearGradient colors={item.gradient} style={styles.card}>
@@ -102,6 +111,64 @@ function ShowroomCard({ item, index }: { item: (typeof EXPERIENCES)[number]; ind
 }
 
 export default function ShowroomHub() {
+  const ambientSoundRef = useRef<Audio.Sound | null>(null)
+  const ambientRequestRef = useRef(0)
+
+  const stopAmbient = useCallback(async () => {
+    ambientRequestRef.current += 1
+    const sound = ambientSoundRef.current
+    ambientSoundRef.current = null
+    if (!sound) return
+    try {
+      await sound.stopAsync()
+    } catch {
+      // The sound may already be stopped while the route is losing focus.
+    }
+    try {
+      await sound.unloadAsync()
+    } catch {
+      // Ignore cleanup errors during navigation.
+    }
+  }, [])
+
+  const startAmbient = useCallback(async () => {
+    await stopAmbient()
+    const requestId = ambientRequestRef.current + 1
+    ambientRequestRef.current = requestId
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../../assets/sounds/showroom-ambient.mp3"),
+        { shouldPlay: true, isLooping: true, volume: 0.35 },
+      )
+      if (ambientRequestRef.current !== requestId) {
+        await sound.unloadAsync()
+        return
+      }
+      ambientSoundRef.current = sound
+    } catch {
+      // Keep the showroom usable if audio playback is unavailable.
+    }
+  }, [stopAmbient])
+
+  useFocusEffect(
+    useCallback(() => {
+      void startAmbient()
+      return () => {
+        void stopAmbient()
+      }
+    }, [startAmbient, stopAmbient]),
+  )
+
+  const openExperience = useCallback(async (route: (typeof EXPERIENCES)[number]["route"]) => {
+    await stopAmbient()
+    router.push(route)
+  }, [stopAmbient])
+
+  const leaveShowroom = useCallback(async () => {
+    await stopAmbient()
+    router.back()
+  }, [stopAmbient])
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -113,7 +180,7 @@ export default function ShowroomHub() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Back"
-            onPress={() => router.back()}
+            onPress={() => { void leaveShowroom() }}
             style={styles.backButton}
           >
             <ChevronLeft size={23} color="#FFFFFF" />
@@ -129,7 +196,7 @@ export default function ShowroomHub() {
 
         <View style={styles.cards}>
           {EXPERIENCES.map((item, index) => (
-            <ShowroomCard key={item.id} item={item} index={index} />
+            <ShowroomCard key={item.id} item={item} index={index} onSelect={(route) => { void openExperience(route) }} />
           ))}
         </View>
 

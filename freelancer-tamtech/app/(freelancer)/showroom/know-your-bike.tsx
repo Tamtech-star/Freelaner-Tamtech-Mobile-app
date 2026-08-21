@@ -11,7 +11,7 @@ import {
 } from "react-native"
 import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { ChevronLeft, ChevronRight, X } from "lucide-react-native"
 import Animated, {
   Easing,
@@ -77,7 +77,10 @@ export default function KnowYourBikeScreen() {
   const [selectedHotspot, setSelectedHotspot] = useState<BikeHotspot | null>(null)
   const [selectedColorId, setSelectedColorId] = useState("blue")
   const [galleryIndex, setGalleryIndex] = useState(0)
-  const activeSoundRef = useRef<Audio.Sound | null>(null)
+  const ambientSoundRef = useRef<Audio.Sound | null>(null)
+  const hotspotSoundRef = useRef<Audio.Sound | null>(null)
+  const ambientStartRef = useRef<Promise<void> | null>(null)
+  const ambientRequestRef = useRef(0)
   const soundRequestRef = useRef(0)
   const float = useSharedValue(0)
   const model = BIKE_MODELS[0]
@@ -104,12 +107,68 @@ export default function KnowYourBikeScreen() {
     opacity: interpolate(float.value, [0, 1], [0.52, 0.3]),
     transform: [{ scaleX: interpolate(float.value, [0, 1], [1, 0.86]) }],
   }))
+  const stopAmbientSound = useCallback(async () => {
+    ambientRequestRef.current += 1
+    const sound = ambientSoundRef.current
+    ambientSoundRef.current = null
+    if (!sound) return
+    try {
+      await sound.stopAsync()
+    } catch {
+      // The route may already have stopped playback while losing focus.
+    }
+    try {
+      await sound.unloadAsync()
+    } catch {
+      // Ignore cleanup errors during navigation.
+    }
+  }, [])
 
+  const startAmbientSound = useCallback(async () => {
+    await stopAmbientSound()
+    const requestId = ambientRequestRef.current + 1
+    ambientRequestRef.current = requestId
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../../../assets/sounds/bike-studio-ambient.mp3"),
+        { shouldPlay: true, isLooping: true, volume: 0.3 },
+      )
+      if (ambientRequestRef.current !== requestId) {
+        await sound.unloadAsync()
+        return
+      }
+      ambientSoundRef.current = sound
+    } catch {
+      // Keep the studio usable if ambient playback is unavailable.
+    }
+  }, [stopAmbientSound])
+
+  const pauseAmbientSound = useCallback(async () => {
+    await ambientStartRef.current
+    const sound = ambientSoundRef.current
+    if (!sound) return
+    try {
+      await sound.pauseAsync()
+    } catch {
+      // Ignore pause errors if route focus changed during the interaction.
+    }
+  }, [])
+
+  const resumeAmbientSound = useCallback(async () => {
+    await ambientStartRef.current
+    const sound = ambientSoundRef.current
+    if (!sound) return
+    try {
+      await sound.playAsync()
+    } catch {
+      // Keep the studio usable if playback cannot resume.
+    }
+  }, [])
 
   const stopHotspotSound = useCallback(async () => {
     soundRequestRef.current += 1
-    const sound = activeSoundRef.current
-    activeSoundRef.current = null
+    const sound = hotspotSoundRef.current
+    hotspotSoundRef.current = null
     if (!sound) return
     try {
       await sound.stopAsync()
@@ -124,6 +183,7 @@ export default function KnowYourBikeScreen() {
   }, [])
 
   const playHotspotSound = useCallback(async (hotspot: BikeHotspot) => {
+    await pauseAmbientSound()
     await stopHotspotSound()
     const requestId = soundRequestRef.current + 1
     soundRequestRef.current = requestId
@@ -139,18 +199,18 @@ export default function KnowYourBikeScreen() {
         await sound.unloadAsync()
         return
       }
-      activeSoundRef.current = sound
+      hotspotSoundRef.current = sound
       await sound.playAsync()
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
-          activeSoundRef.current = null
+          hotspotSoundRef.current = null
           void sound.unloadAsync()
         }
       })
     } catch {
       // The visual interaction remains available if audio playback is unavailable.
     }
-  }, [stopHotspotSound])
+  }, [pauseAmbientSound, stopHotspotSound])
 
   const openHotspot = useCallback(
     (hotspot: BikeHotspot) => {
@@ -162,12 +222,33 @@ export default function KnowYourBikeScreen() {
 
   const closeHotspot = useCallback(() => {
     setSelectedHotspot(null)
-    void stopHotspotSound()
-  }, [stopHotspotSound])
+    void (async () => {
+      await stopHotspotSound()
+      await resumeAmbientSound()
+    })()
+  }, [resumeAmbientSound, stopHotspotSound])
 
-  useEffect(() => () => {
-    void stopHotspotSound()
-  }, [stopHotspotSound])
+  useFocusEffect(
+    useCallback(() => {
+      const startRequest = startAmbientSound()
+      ambientStartRef.current = startRequest
+      void startRequest.finally(() => {
+        if (ambientStartRef.current === startRequest) ambientStartRef.current = null
+      })
+      return () => {
+        setSelectedHotspot(null)
+        void stopHotspotSound()
+        void stopAmbientSound()
+      }
+    }, [startAmbientSound, stopAmbientSound, stopHotspotSound]),
+  )
+
+  const leaveStudio = useCallback(async () => {
+    setSelectedHotspot(null)
+    await stopHotspotSound()
+    await stopAmbientSound()
+    router.back()
+  }, [stopAmbientSound, stopHotspotSound])
 
   const selectColor = (colorId: string) => {
     const color = model.colors.find((item) => item.id === colorId)
@@ -185,7 +266,7 @@ export default function KnowYourBikeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
         <View style={styles.header}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { closeHotspot(); router.back() }} style={styles.iconButton}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { void leaveStudio() }} style={styles.iconButton}>
             <ChevronLeft size={23} color="#FFFFFF" />
           </Pressable>
           <View style={styles.headerCopy}>
