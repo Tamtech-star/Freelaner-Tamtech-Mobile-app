@@ -51,35 +51,43 @@ type FinancingOption = {
 const OPTIONS: FinancingOption[] = [
   {
     id: "hire-purchase",
-    eyebrow: "FLEXIBLE OWNERSHIP",
+    eyebrow: "WATU FINANCING",
     title: "Hire Purchase",
-    summary: "Ride now, spread the cost with a structured path to ownership.",
+    summary: "Ride Green. Save More. Pay daily while you earn.",
     accent: "#37E6FF",
     icon: WalletCards,
     details: [
-      { label: "Typical deposit", value: "From 20%" },
-      { label: "Repayment period", value: "12–36 months" },
-      { label: "Indicative interest", value: "From 12% p.a." },
-      { label: "Best for", value: "Predictable monthly planning" },
+      { label: "Promo Deposit", value: "KES 15,000 (Was 25k)" },
+      { label: "Daily Payment", value: "KES 340" },
+      { label: "Duration", value: "18 Months" },
+      { label: "Requirements", value: "ID, KRA PIN, 6mo M-PESA" },
     ],
-    guideIntro: "Hire Purchase is designed to help you start riding while spreading the balance over manageable monthly payments.",
-    guidePoints: ["Begin with a deposit from 20%.", "Choose a repayment period between 12 and 36 months.", "Your final rate is confirmed after lender assessment."],
+    guideIntro: "Watu Financing makes EV ownership easy. You do NOT need a Driving License or Stage Chairman details to qualify!",
+    guidePoints: [
+      "Take advantage of the limited KES 15,000 deposit discount.",
+      "Pay just KES 340 daily for an 18-month duration.",
+      "Requires: Original ID (Borrower & Guarantor) and 3 Reference Contacts."
+    ],
   },
   {
     id: "cash-loan",
-    eyebrow: "QUICKER START",
-    title: "Cash Loan",
-    summary: "Secure the funds you need and take a direct route to your new bike.",
+    eyebrow: "IMMEDIATE OWNERSHIP",
+    title: "Cash Purchase",
+    summary: "Secure your EV bike immediately with a one-time payment. Zero daily hassle.",
     accent: "#B7FF4A",
     icon: Percent,
     details: [
-      { label: "Deposit", value: "Flexible" },
-      { label: "Repayment period", value: "6–24 months" },
-      { label: "Indicative interest", value: "Subject to lender review" },
-      { label: "Best for", value: "Fast, adaptable financing" },
+      { label: "Total Price", value: "KES 130,000" },
+      { label: "Daily Payment", value: "None" },
+      { label: "Interest", value: "0%" },
+      { label: "Best for", value: "Maximum long-term savings" },
     ],
-    guideIntro: "Cash Loan financing gives you a direct route to purchase while keeping the repayment structure adaptable to your plan.",
-    guidePoints: ["Deposit requirements are flexible.", "Repay over a 6 to 24 month period.", "The lender confirms the final interest and offer."],
+    guideIntro: "Buying in cash is the most cost-effective way to ride. You pay once and own the bike completely with zero daily deductions.",
+    guidePoints: [
+      "Pay a flat cash price of KES 130,000.",
+      "No daily payments, interest rates, or loan durations.",
+      "Ride away immediately with 100% ownership."
+    ],
   },
 ]
 
@@ -205,13 +213,16 @@ export default function FinancingScreen() {
     }
   }, [stopSound])
 
-  const playNarration = useCallback(async (token: number) => {
+  const playNarration = useCallback(async (token: number, option: FinancingOption) => {
     if (token !== animationTokenRef.current) return
     await stopSound(narrationSoundRef)
     if (token !== animationTokenRef.current) return
     try {
+      const narrationSource = option.id === "cash-loan"
+        ? require("../../../assets/sounds/financing-speech-female.mp3")
+        : require("../../../assets/sounds/financing-speech.mp3")
       const { sound } = await Audio.Sound.createAsync(
-        require("../../../assets/sounds/financing-speech.mp3"),
+        narrationSource,
         { shouldPlay: true, volume: 0.8 },
       )
       if (token !== animationTokenRef.current) {
@@ -230,7 +241,7 @@ export default function FinancingScreen() {
     }
   }, [stopSound])
 
-  const startGuideMotion = useCallback((token: number) => {
+  const startGuideMotion = useCallback((token: number, option: FinancingOption) => {
     if (token !== animationTokenRef.current) return
     avatarIdle.value = withRepeat(
       withSequence(
@@ -242,7 +253,7 @@ export default function FinancingScreen() {
     )
     bubbleScale.value = withTiming(1, { duration: 420, easing: Easing.out(Easing.back(1.35)) })
     bubbleOpacity.value = withTiming(1, { duration: 260 })
-    void playNarration(token)
+    void playNarration(token, option)
   }, [avatarIdle, bubbleOpacity, bubbleScale, playNarration])
 
   const avatarStyle = useAnimatedStyle(() => ({
@@ -286,7 +297,7 @@ export default function FinancingScreen() {
     avatarOpacity.value = 0
     avatarOpacity.value = withTiming(1, { duration: 260 })
     avatarEntrance.value = withTiming(0, { duration: 760, easing: Easing.out(Easing.cubic) })
-    setTimeout(() => startGuideMotion(token), 780)
+    setTimeout(() => startGuideMotion(token, option), 780)
   }, [avatarEntrance, avatarIdle, avatarOpacity, bubbleOpacity, bubbleScale, playClick, startGuideMotion, stopGuideAudio])
 
   const toggle = useCallback((option: FinancingOption) => {
@@ -356,7 +367,13 @@ export default function FinancingScreen() {
               </View>
             </Animated.View>
             <Animated.View style={[styles.avatarWrap, avatarStyle]} pointerEvents="none">
-              <Image source={require("../../../assets/images/guide/guide-pointing.png")} style={styles.avatar} resizeMode="contain" />
+              <Image
+                source={guideOption.id === "cash-loan"
+                  ? require("../../../assets/images/guide/guide-pointing-female.png")
+                  : require("../../../assets/images/guide/guide-pointing.png")}
+                style={styles.avatar}
+                resizeMode="contain"
+              />
             </Animated.View>
           </View>
         ) : null}

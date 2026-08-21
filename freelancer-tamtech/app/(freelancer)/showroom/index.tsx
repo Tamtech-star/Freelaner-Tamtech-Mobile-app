@@ -112,6 +112,7 @@ function ShowroomCard({
 
 export default function ShowroomHub() {
   const ambientSoundRef = useRef<Audio.Sound | null>(null)
+  const ambientStartRef = useRef<Promise<void> | null>(null)
   const ambientRequestRef = useRef(0)
 
   const stopAmbient = useCallback(async () => {
@@ -132,7 +133,15 @@ export default function ShowroomHub() {
   }, [])
 
   const startAmbient = useCallback(async () => {
-    await stopAmbient()
+    const existingSound = ambientSoundRef.current
+    if (existingSound) {
+      try {
+        await existingSound.playAsync()
+      } catch {
+        // Keep the showroom usable if playback cannot resume.
+      }
+      return
+    }
     const requestId = ambientRequestRef.current + 1
     ambientRequestRef.current = requestId
     try {
@@ -148,21 +157,40 @@ export default function ShowroomHub() {
     } catch {
       // Keep the showroom usable if audio playback is unavailable.
     }
-  }, [stopAmbient])
+  }, [])
+
+  const pauseAmbient = useCallback(async () => {
+    await ambientStartRef.current
+    const sound = ambientSoundRef.current
+    if (!sound) return
+    try {
+      await sound.pauseAsync()
+    } catch {
+      // The route may already be paused while losing focus.
+    }
+  }, [])
 
   useFocusEffect(
     useCallback(() => {
-      void startAmbient()
+      const startRequest = startAmbient()
+      ambientStartRef.current = startRequest
+      void startRequest.finally(() => {
+        if (ambientStartRef.current === startRequest) ambientStartRef.current = null
+      })
       return () => {
-        void stopAmbient()
+        void pauseAmbient()
       }
-    }, [startAmbient, stopAmbient]),
+    }, [pauseAmbient, startAmbient]),
   )
 
-  const openExperience = useCallback(async (route: (typeof EXPERIENCES)[number]["route"]) => {
-    await stopAmbient()
-    router.push(route)
+  useEffect(() => () => {
+    void stopAmbient()
   }, [stopAmbient])
+
+  const openExperience = useCallback(async (route: (typeof EXPERIENCES)[number]["route"]) => {
+    await pauseAmbient()
+    router.push(route)
+  }, [pauseAmbient])
 
   const leaveShowroom = useCallback(async () => {
     await stopAmbient()
