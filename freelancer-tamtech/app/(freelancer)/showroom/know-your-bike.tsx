@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   Dimensions,
   Image,
@@ -74,12 +74,16 @@ function Hotspot({
 }
 
 export default function KnowYourBikeScreen() {
-  const [modelIndex, setModelIndex] = useState(0)
   const [selectedHotspot, setSelectedHotspot] = useState<BikeHotspot | null>(null)
+  const [selectedColorId, setSelectedColorId] = useState("blue")
+  const [galleryIndex, setGalleryIndex] = useState(0)
   const activeSoundRef = useRef<Audio.Sound | null>(null)
   const soundRequestRef = useRef(0)
   const float = useSharedValue(0)
-  const model = BIKE_MODELS[modelIndex]
+  const model = BIKE_MODELS[0]
+  const selectedColor = model.colors.find((color) => color.id === selectedColorId) ?? model.colors[0]
+  const galleryImages = selectedColor.images
+  const galleryImage = galleryImages[galleryIndex] ?? model.image
 
   useEffect(() => {
     float.value = withRepeat(
@@ -101,7 +105,6 @@ export default function KnowYourBikeScreen() {
     transform: [{ scaleX: interpolate(float.value, [0, 1], [1, 0.86]) }],
   }))
 
-  const dots = useMemo(() => BIKE_MODELS.map((bike) => bike.id), [])
 
   const stopHotspotSound = useCallback(async () => {
     soundRequestRef.current += 1
@@ -125,7 +128,7 @@ export default function KnowYourBikeScreen() {
     const requestId = soundRequestRef.current + 1
     soundRequestRef.current = requestId
     try {
-      const soundSource = hotspot.id === "engine"
+      const soundSource = hotspot.id === "motor"
         ? require("../../../assets/sounds/power.mp3")
         : require("../../../assets/sounds/core.mp3")
       const { sound } = await Audio.Sound.createAsync(
@@ -162,14 +165,21 @@ export default function KnowYourBikeScreen() {
     void stopHotspotSound()
   }, [stopHotspotSound])
 
-  const changeModel = (direction: -1 | 1) => {
-    closeHotspot()
-    setModelIndex((current) => (current + direction + BIKE_MODELS.length) % BIKE_MODELS.length)
-  }
-
   useEffect(() => () => {
     void stopHotspotSound()
   }, [stopHotspotSound])
+
+  const selectColor = (colorId: string) => {
+    const color = model.colors.find((item) => item.id === colorId)
+    if (!color?.available || color.images.length === 0) return
+    setSelectedColorId(colorId)
+    setGalleryIndex(0)
+  }
+
+  const moveGallery = (direction: -1 | 1) => {
+    if (galleryImages.length < 2) return
+    setGalleryIndex((current) => (current + direction + galleryImages.length) % galleryImages.length)
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -182,10 +192,7 @@ export default function KnowYourBikeScreen() {
             <Text style={styles.headerEyebrow}>KNOW YOUR BIKE</Text>
             <Text style={styles.headerTitle}>Studio view</Text>
           </View>
-          <View style={styles.headerIndex}>
-            <Text style={styles.headerIndexText}>{String(modelIndex + 1).padStart(2, "0")}</Text>
-            <Text style={styles.headerIndexTotal}>/{String(BIKE_MODELS.length).padStart(2, "0")}</Text>
-          </View>
+          <Text style={styles.headerModel}>01 MODEL</Text>
         </View>
 
         <ScrollView
@@ -217,20 +224,42 @@ export default function KnowYourBikeScreen() {
             <Text style={styles.modelName}>{model.name}</Text>
             <Text style={styles.modelTagline}>{model.tagline}</Text>
             <Text style={styles.modelPrice}>{model.price}</Text>
-          </View>
-
-          <View style={styles.modelControls}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Previous bike" onPress={() => changeModel(-1)} style={styles.modelButton}>
-              <ChevronLeft size={22} color="#FFFFFF" />
-            </Pressable>
-            <View style={styles.pagination}>
-              {dots.map((id, index) => (
-                <View key={id} style={[styles.pageDot, index === modelIndex && styles.pageDotActive]} />
+            <View style={styles.gallery}>
+              <Image source={galleryImage} style={styles.galleryImage} resizeMode="cover" />
+              <LinearGradient colors={["transparent", "#000000CC"]} style={styles.galleryShade} />
+              <View style={styles.galleryTopRow}>
+                <Text style={styles.galleryLabel}>{selectedColor.name.toUpperCase()}</Text>
+                <Text style={styles.galleryCount}>{String(galleryIndex + 1).padStart(2, "0")} / {String(Math.max(galleryImages.length, 1)).padStart(2, "0")}</Text>
+              </View>
+              <View style={styles.galleryControls}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Previous bike photo" disabled={galleryImages.length < 2} onPress={() => moveGallery(-1)} style={[styles.galleryArrow, galleryImages.length < 2 && styles.galleryArrowDisabled]}>
+                  <ChevronLeft size={22} color="#FFFFFF" />
+                </Pressable>
+                <View style={styles.galleryDots}>
+                  {galleryImages.map((_, index) => <View key={`${selectedColor.id}-${index}`} style={[styles.galleryDot, index === galleryIndex && styles.galleryDotActive]} />)}
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel="Next bike photo" disabled={galleryImages.length < 2} onPress={() => moveGallery(1)} style={[styles.galleryArrow, galleryImages.length < 2 && styles.galleryArrowDisabled]}>
+                  <ChevronRight size={22} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            </View>
+            <Text style={styles.colorHeading}>FACTORY COLOUR</Text>
+            <View style={styles.colorOptions}>
+              {model.colors.map((color) => (
+                <Pressable
+                  key={color.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectedColor.id === color.id, disabled: !color.available }}
+                  accessibilityLabel={`Select ${color.name}`}
+                  disabled={!color.available}
+                  onPress={() => selectColor(color.id)}
+                  style={[styles.colorButton, selectedColor.id === color.id && styles.colorButtonActive, !color.available && styles.colorButtonDisabled]}
+                >
+                  <View style={[styles.colorDot, { backgroundColor: color.swatch }]} />
+                  <Text style={[styles.colorText, selectedColor.id === color.id && styles.colorTextActive, !color.available && styles.colorTextDisabled]}>{color.name}{!color.available ? " · SOON" : ""}</Text>
+                </Pressable>
               ))}
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Next bike" onPress={() => changeModel(1)} style={styles.modelButton}>
-              <ChevronRight size={22} color="#FFFFFF" />
-            </Pressable>
           </View>
         </ScrollView>
 
@@ -249,6 +278,14 @@ export default function KnowYourBikeScreen() {
               </View>
               <Text style={styles.specTitle}>{selectedHotspot.title}</Text>
               <Text style={styles.specDescription}>{selectedHotspot.description}</Text>
+              <View style={styles.specPoints}>
+                {selectedHotspot.points.map((point) => (
+                  <View key={point} style={styles.specPointRow}>
+                    <View style={styles.specPoint} />
+                    <Text style={styles.specPointText}>{point}</Text>
+                  </View>
+                ))}
+              </View>
               <View style={styles.specDivider} />
               <View style={styles.specFooter}>
                 <Text style={styles.specFooterLabel}>MODEL</Text>
@@ -270,9 +307,7 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, marginLeft: 14 },
   headerEyebrow: { color: "#37E6FF", fontSize: 9, fontWeight: "900", letterSpacing: 1.7 },
   headerTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", marginTop: 3 },
-  headerIndex: { flexDirection: "row", alignItems: "baseline" },
-  headerIndexText: { color: "#FFFFFF", fontSize: 18, fontWeight: "800" },
-  headerIndexTotal: { color: "#5E6468", fontSize: 11, fontWeight: "700" },
+  headerModel: { color: "#5E6468", fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
   scroll: { flex: 1 },
   scrollContent: { alignItems: "center", paddingTop: 16, paddingBottom: 40 },
   stage: { borderWidth: 1, borderColor: "#20282A", backgroundColor: "#020303", overflow: "hidden" },
@@ -293,11 +328,27 @@ const styles = StyleSheet.create({
   modelName: { color: "#FFFFFF", fontSize: 30, lineHeight: 34, fontWeight: "900" },
   modelTagline: { color: "#858B90", fontSize: 14, lineHeight: 21, marginTop: 7 },
   modelPrice: { color: "#37E6FF", fontSize: 16, fontWeight: "800", marginTop: 13 },
-  modelControls: { width: STAGE_WIDTH, marginTop: 22, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  modelButton: { width: 48, height: 48, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#2C2C2C", backgroundColor: "#090909" },
-  pagination: { flexDirection: "row", alignItems: "center", gap: 8 },
-  pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#333333" },
-  pageDotActive: { width: 28, backgroundColor: "#37E6FF" },
+  gallery: { height: 210, marginTop: 22, borderWidth: 1, borderColor: "#253033", backgroundColor: "#050707", overflow: "hidden" },
+  galleryImage: { width: "100%", height: "100%" },
+  galleryShade: { ...StyleSheet.absoluteFillObject },
+  galleryTopRow: { position: "absolute", top: 12, left: 13, right: 13, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  galleryLabel: { color: "#D7FFFF", fontSize: 9, fontWeight: "900", letterSpacing: 1.4 },
+  galleryCount: { color: "#A2ABAE", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  galleryControls: { position: "absolute", left: 12, right: 12, bottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  galleryArrow: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#718084", backgroundColor: "#00000088" },
+  galleryArrowDisabled: { opacity: 0.35 },
+  galleryDots: { flexDirection: "row", alignItems: "center", gap: 6 },
+  galleryDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#798386" },
+  galleryDotActive: { width: 22, backgroundColor: "#FFFFFF" },
+  colorHeading: { color: "#5E686C", fontSize: 9, fontWeight: "900", letterSpacing: 1.5, marginTop: 22, marginBottom: 10 },
+  colorOptions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  colorButton: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "#252B2D", paddingHorizontal: 9, paddingVertical: 7, backgroundColor: "#070909" },
+  colorButtonActive: { borderColor: "#37E6FF", backgroundColor: "#0B1719" },
+  colorButtonDisabled: { opacity: 0.48 },
+  colorDot: { width: 9, height: 9, borderRadius: 5 },
+  colorText: { color: "#70797C", fontSize: 9, fontWeight: "700" },
+  colorTextActive: { color: "#D7FFFF" },
+  colorTextDisabled: { color: "#5B6264" },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "#000000B8", zIndex: 20 },
   specPanel: { position: "absolute", zIndex: 30, left: 12, right: 12, bottom: 12, padding: 24, backgroundColor: "#101415F7", borderWidth: 1, borderColor: "#3A4A4E" },
   specGrabber: { width: 46, height: 3, backgroundColor: "#596367", alignSelf: "center", marginBottom: 22 },
@@ -306,6 +357,10 @@ const styles = StyleSheet.create({
   closeButton: { width: 38, height: 38, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#353B3D" },
   specTitle: { color: "#FFFFFF", fontSize: 27, fontWeight: "900", marginTop: 20 },
   specDescription: { color: "#A7AFB2", fontSize: 15, lineHeight: 23, marginTop: 10 },
+  specPoints: { gap: 9, marginTop: 17 },
+  specPointRow: { flexDirection: "row", alignItems: "flex-start", gap: 9 },
+  specPoint: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#37E6FF", marginTop: 6 },
+  specPointText: { flex: 1, color: "#C2CBCC", fontSize: 12, lineHeight: 18 },
   specDivider: { height: 1, backgroundColor: "#2A3032", marginVertical: 22 },
   specFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   specFooterLabel: { color: "#626B6E", fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
