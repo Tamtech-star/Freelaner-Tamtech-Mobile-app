@@ -115,6 +115,9 @@ export function startSyncWorker(): () => void {
     running = true
     try {
       await runSyncWorkerIfStale()
+    } catch {
+      // Remote sync is best-effort. Keep cached data and pending submissions
+      // available when the API is unreachable; NetInfo will retry later.
     } finally {
       running = false
     }
