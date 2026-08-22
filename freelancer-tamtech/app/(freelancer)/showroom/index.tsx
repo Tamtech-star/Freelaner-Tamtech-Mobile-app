@@ -214,7 +214,7 @@ export default function ShowroomHub() {
             <ChevronLeft size={23} color="#FFFFFF" />
           </Pressable>
           <View style={styles.headerCopy}>
-            <Text style={styles.kicker}>TAMTECH / VIRTUAL SHOWROOM</Text>
+            <Text style={styles.kicker}>TAMTECH VIRTUAL SHOWROOM</Text>
             <Text style={styles.title}>Choose your experience.</Text>
             <Text style={styles.subtitle}>
               Get closer to the machine, then find the ownership path built around you.
