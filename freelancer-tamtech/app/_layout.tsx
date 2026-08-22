@@ -33,15 +33,15 @@ export default function RootLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
         {isAuthenticated && role === "sales_agent" ? (
           <Stack.Screen name="(sales-record)" />
         ) : isAuthenticated && role === "admin" ? (
           <Stack.Screen name="(admin)" />
         ) : isAuthenticated && role === "freelancer" ? (
           <Stack.Screen name="(freelancer)" />
-        ) : (
-          <Stack.Screen name="login" />
-        )}
+        ) : null}
         <Stack.Screen name="(public)" options={{ presentation: "modal" }} />
       </Stack>
       <StatusBar style="dark" />
