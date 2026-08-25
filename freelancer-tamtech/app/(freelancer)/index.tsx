@@ -67,7 +67,7 @@ type DashboardTab = "cards" | "workflow";
 
 // Constants
 
-const BIKE_MODELS = ["EKON450M1V3", "EKON450M2V2"];
+const BIKE_MODELS = ["EKON450M1V3", "EKON450M1V2", "EKON450M2V2"];
 
 // Reduced to 2 steps
 const WORKFLOW_STEPS = [
