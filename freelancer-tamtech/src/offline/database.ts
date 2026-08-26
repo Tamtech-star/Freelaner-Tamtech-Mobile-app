@@ -17,6 +17,14 @@ type LocalSalesRow = SalesRecordItem & {
   payload_json: string | null
 }
 
+const EXTENDED_SALES_COLUMNS = [
+  ["customer_type", "TEXT"], ["customer_id_number", "TEXT"], ["customer_phone", "TEXT"],
+  ["kra_pin", "TEXT"], ["customer_location", "TEXT"], ["bike_registration_number", "TEXT"],
+  ["chassis_number", "TEXT"], ["finance_details", "TEXT"], ["bike_color", "TEXT"],
+  ["has_insurance", "INTEGER"], ["insurance_type", "TEXT"], ["has_tracker", "INTEGER"],
+  ["tracker_duration", "TEXT"], ["referral_name", "TEXT"], ["deployment_name", "TEXT"],
+] as const
+
 let databasePromise: Promise<SQLiteDatabase> | null = null
 let initializationPromise: Promise<SQLiteDatabase> | null = null
 
@@ -89,6 +97,11 @@ export async function initializeDatabase(): Promise<SQLiteDatabase> {
     CREATE INDEX IF NOT EXISTS idx_freelancers_updated_at ON freelancers(updated_at);
     CREATE INDEX IF NOT EXISTS idx_materials_updated_at ON materials(updated_at);
     `)
+    const columns = await db.getAllAsync<{ name: string }>("PRAGMA table_info(sales_records)")
+    const names = new Set(columns.map((column) => column.name))
+    for (const [name, type] of EXTENDED_SALES_COLUMNS) {
+      if (!names.has(name)) await db.execAsync(`ALTER TABLE sales_records ADD COLUMN ${name} ${type}`)
+    }
     return db
   })().catch((error) => {
     initializationPromise = null
@@ -106,6 +119,12 @@ function salesParams(row: SalesRecordItem & { sync_status?: string; updated_at: 
     row.id_doc_url ?? null, row.kra_doc_url ?? null, row.bike_photo_url ?? null,
     row.chassis_photo_url ?? null, row.sync_status ?? "synced", row.updated_at,
     row.payload_json ?? null,
+    row.customer_type ?? null, row.customer_id_number ?? null, row.customer_phone ?? null,
+    row.kra_pin ?? null, row.customer_location ?? null, row.bike_registration_number ?? null,
+    row.chassis_number ?? null, row.finance_details ?? null, row.bike_color ?? null,
+    row.has_insurance == null ? null : row.has_insurance ? 1 : 0, row.insurance_type ?? null,
+    row.has_tracker == null ? null : row.has_tracker ? 1 : 0, row.tracker_duration ?? null,
+    row.referral_name ?? null, row.deployment_name ?? null,
   ]
 }
 
@@ -120,9 +139,9 @@ export async function upsertSalesRecords(records: SalesRecordItem[], updatedAt =
   await db.withExclusiveTransactionAsync(async (txn) => {
     for (const row of records) {
       await txn.runAsync(
-        `INSERT INTO sales_records (id, conversion_code, submission_type, customer_name, freight, sales_agent_name, sales_invoice_number, bike_model_sold, sale_date, quantity, commission_kes, paid_kes, payment_status, freelancer_name, payment_type, invoice_photo_url, agreement_photo_url, id_doc_url, kra_doc_url, bike_photo_url, chassis_photo_url, sync_status, updated_at, payload_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET conversion_code=excluded.conversion_code, submission_type=excluded.submission_type, customer_name=excluded.customer_name, freight=excluded.freight, sales_agent_name=excluded.sales_agent_name, sales_invoice_number=excluded.sales_invoice_number, bike_model_sold=excluded.bike_model_sold, sale_date=excluded.sale_date, quantity=excluded.quantity, commission_kes=excluded.commission_kes, paid_kes=excluded.paid_kes, payment_status=excluded.payment_status, freelancer_name=excluded.freelancer_name, payment_type=excluded.payment_type, invoice_photo_url=excluded.invoice_photo_url, agreement_photo_url=excluded.agreement_photo_url, id_doc_url=excluded.id_doc_url, kra_doc_url=excluded.kra_doc_url, bike_photo_url=excluded.bike_photo_url, chassis_photo_url=excluded.chassis_photo_url, updated_at=excluded.updated_at`,
+        `INSERT INTO sales_records (id, conversion_code, submission_type, customer_name, freight, sales_agent_name, sales_invoice_number, bike_model_sold, sale_date, quantity, commission_kes, paid_kes, payment_status, freelancer_name, payment_type, invoice_photo_url, agreement_photo_url, id_doc_url, kra_doc_url, bike_photo_url, chassis_photo_url, sync_status, updated_at, payload_json, customer_type, customer_id_number, customer_phone, kra_pin, customer_location, bike_registration_number, chassis_number, finance_details, bike_color, has_insurance, insurance_type, has_tracker, tracker_duration, referral_name, deployment_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET conversion_code=excluded.conversion_code, submission_type=excluded.submission_type, customer_name=excluded.customer_name, freight=excluded.freight, sales_agent_name=excluded.sales_agent_name, sales_invoice_number=excluded.sales_invoice_number, bike_model_sold=excluded.bike_model_sold, sale_date=excluded.sale_date, quantity=excluded.quantity, commission_kes=excluded.commission_kes, paid_kes=excluded.paid_kes, payment_status=excluded.payment_status, freelancer_name=excluded.freelancer_name, payment_type=excluded.payment_type, invoice_photo_url=excluded.invoice_photo_url, agreement_photo_url=excluded.agreement_photo_url, id_doc_url=excluded.id_doc_url, kra_doc_url=excluded.kra_doc_url, bike_photo_url=excluded.bike_photo_url, chassis_photo_url=excluded.chassis_photo_url, updated_at=excluded.updated_at, customer_type=excluded.customer_type, customer_id_number=excluded.customer_id_number, customer_phone=excluded.customer_phone, kra_pin=excluded.kra_pin, customer_location=excluded.customer_location, bike_registration_number=excluded.bike_registration_number, chassis_number=excluded.chassis_number, finance_details=excluded.finance_details, bike_color=excluded.bike_color, has_insurance=excluded.has_insurance, insurance_type=excluded.insurance_type, has_tracker=excluded.has_tracker, tracker_duration=excluded.tracker_duration, referral_name=excluded.referral_name, deployment_name=excluded.deployment_name`,
         salesParams({ ...row, updated_at: updatedAt }),
       )
     }
@@ -133,7 +152,12 @@ export async function insertPendingSalesRecord(record: PendingSalesRecord): Prom
   const db = await initializeDatabase()
   await db.runAsync(
     `INSERT INTO sales_records (id, conversion_code, submission_type, customer_name, freight, sales_agent_name, sales_invoice_number, bike_model_sold, sale_date, quantity, commission_kes, paid_kes, payment_status, freelancer_name, payment_type, invoice_photo_url, agreement_photo_url, id_doc_url, kra_doc_url, bike_photo_url, chassis_photo_url, sync_status, updated_at, payload_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    salesParams(record),
+    record.id, record.conversion_code, record.submission_type, record.customer_name, record.freight,
+    record.sales_agent_name, record.sales_invoice_number, record.bike_model_sold, record.sale_date,
+    record.quantity, record.commission_kes, record.paid_kes, record.payment_status, record.freelancer_name ?? null,
+    record.payment_type ?? null, record.invoice_photo_url ?? null, record.agreement_photo_url ?? null,
+    record.id_doc_url ?? null, record.kra_doc_url ?? null, record.bike_photo_url ?? null,
+    record.chassis_photo_url ?? null, record.sync_status, record.updated_at, record.payload_json,
   )
 }
 

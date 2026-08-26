@@ -17,6 +17,7 @@ import { Download, Pencil } from "lucide-react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import type { SalesRecordItem } from "../../src/api/salesRecord"
+import api from "../../src/api/client"
 import { getSalesHistoryLocalFirst, syncSalesHistoryNow } from "../../src/api/salesHistory"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { getFreelancerCardName } from "../../src/utils/salesDisplay"
@@ -141,6 +142,30 @@ export default function SalesRecordHome() {
       setDownloading(false)
     }
   }, [filteredRows])
+
+  const openSaleDetails = useCallback(async (item: SaleRecordRow) => {
+    setSelectedRow(item)
+    try {
+      const { data } = await api.get(`/sales-record/${item.id}`)
+      const sale = data.sale || {}
+      setSelectedRow((current) => current?.id !== item.id ? current : {
+        ...current,
+        customer_name: sale.customer_full_name || current.customer_name,
+        sales_invoice_number: sale.invoice_number || current.sales_invoice_number,
+        bike_model_sold: sale.bike_model_sold || current.bike_model_sold,
+        sale_date: sale.invoice_date || current.sale_date,
+        quantity: sale.quantity_purchased || current.quantity,
+        invoice_photo_url: sale.invoice_photo_url || current.invoice_photo_url,
+        agreement_photo_url: sale.sales_agreement_photo_url || current.agreement_photo_url,
+        id_doc_url: sale.id_document_url || current.id_doc_url,
+        kra_doc_url: sale.kra_document_url || current.kra_doc_url,
+        bike_photo_url: sale.bike_photo_url || current.bike_photo_url,
+        chassis_photo_url: sale.chassis_photo_url || current.chassis_photo_url,
+      })
+    } catch {
+      // The cached row remains usable; the edit screen reports backend deployment errors.
+    }
+  }, [])
 
   return (
     <View style={s.container}>
@@ -315,7 +340,7 @@ export default function SalesRecordHome() {
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  onPress={() => setSelectedRow(item)}
+                  onPress={() => { void openSaleDetails(item) }}
                   style={[s.historyCard, SHADOWS.cardSm]}
                 >
                   {/* Row 1: Code + Type Badge */}
@@ -426,8 +451,21 @@ export default function SalesRecordHome() {
                       params: {
                         editId: selectedRow.id,
                         customerFullName: selectedRow.customer_name,
+                        customerType: selectedRow.customer_type || "individual",
+                        customerIdNumber: selectedRow.customer_id_number || "",
+                        customerPhone: selectedRow.customer_phone || "",
+                        kraPin: selectedRow.kra_pin || "",
+                        customerLocation: selectedRow.customer_location || "",
                         bikeModel: selectedRow.bike_model_sold,
+                        bikeRegistrationNumber: selectedRow.bike_registration_number || "",
+                        chassisNumber: selectedRow.chassis_number || "",
                         paymentType: selectedRow.payment_type || "cash",
+                        financeDetails: selectedRow.finance_details || "",
+                        bikeColor: selectedRow.bike_color || "",
+                        hasInsurance: selectedRow.has_insurance ? selectedRow.insurance_type || "TPO PRIVATE" : "No",
+                        hasTracker: selectedRow.has_tracker ? selectedRow.tracker_duration || "Yearly" : "No",
+                        referralName: selectedRow.referral_name || "",
+                        deploymentName: selectedRow.deployment_name || "",
                         invoiceNumber: selectedRow.sales_invoice_number,
                         saleDate: selectedRow.sale_date,
                         quantity: String(selectedRow.quantity),

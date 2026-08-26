@@ -113,8 +113,21 @@ export default function SalesRecordForm() {
   const params = useLocalSearchParams<{
     editId?: string
     customerFullName?: string
+    customerType?: string
+    customerIdNumber?: string
+    customerPhone?: string
+    kraPin?: string
+    customerLocation?: string
     bikeModel?: string
+    bikeRegistrationNumber?: string
+    chassisNumber?: string
     paymentType?: string
+    financeDetails?: string
+    bikeColor?: string
+    hasInsurance?: string
+    hasTracker?: string
+    referralName?: string
+    deploymentName?: string
     invoiceNumber?: string
     saleDate?: string
     quantity?: string
@@ -129,9 +142,22 @@ export default function SalesRecordForm() {
   const isEditing = Boolean(editId)
   const [form, setForm] = useState<FormState>(() => ({
     ...INITIAL_FORM,
+    customerType: params.customerType === "company" ? "company" : "individual",
     customerFullName: params.customerFullName || "",
+    customerIdNumber: params.customerIdNumber || "",
+    customerPhone: params.customerPhone || "",
+    kraPin: params.kraPin || "",
+    customerLocation: params.customerLocation || "",
     bikeModel: params.bikeModel || "",
+    bikeRegistrationNumber: params.bikeRegistrationNumber || "",
+    chassisNumber: params.chassisNumber || "",
     paymentType: params.paymentType === "loan" ? "loan" : "cash",
+    financeDetails: params.financeDetails || "",
+    bikeColor: params.bikeColor || "",
+    hasInsurance: params.hasInsurance || "No",
+    hasTracker: params.hasTracker || "No",
+    referralName: params.referralName || "",
+    deploymentName: params.deploymentName || "",
     invoiceNumber: params.invoiceNumber === "—" ? "" : params.invoiceNumber || "",
     saleDate: params.saleDate || today,
     quantity: params.quantity || "1",
@@ -159,34 +185,34 @@ export default function SalesRecordForm() {
         if (cancelled) return
         const sale = data.sale || {}
         setForm({
-          customerType: sale.customer_type || "individual",
-          customerFullName: sale.customer_full_name || "",
-          customerIdNumber: sale.customer_id_number || "",
-          customerPhone: sale.customer_phone || "",
-          kraPin: sale.kra_pin || "",
-          customerLocation: sale.customer_location || "",
-          bikeModel: sale.bike_model_sold || "",
-          bikeRegistrationNumber: sale.bike_registration_number || "",
-          chassisNumber: sale.chassis_number || "",
-          paymentType: sale.payment_type || "cash",
-          financeDetails: sale.finance_details || "",
-          bikeColor: sale.bike_color || "",
-          hasInsurance: sale.has_insurance ? sale.insurance_type || "TPO PRIVATE" : "No",
-          hasTracker: sale.has_tracker ? sale.tracker_duration || "Yearly" : "No",
-          referralName: sale.referral_name || "",
-          deploymentName: sale.deployment_name || "",
-          invoiceNumber: sale.invoice_number || "",
+          customerType: sale.customer_type || params.customerType || "individual",
+          customerFullName: sale.customer_full_name || params.customerFullName || "",
+          customerIdNumber: sale.customer_id_number || params.customerIdNumber || "",
+          customerPhone: sale.customer_phone || params.customerPhone || "",
+          kraPin: sale.kra_pin || params.kraPin || "",
+          customerLocation: sale.customer_location || params.customerLocation || "",
+          bikeModel: sale.bike_model_sold || params.bikeModel || "",
+          bikeRegistrationNumber: sale.bike_registration_number || params.bikeRegistrationNumber || "",
+          chassisNumber: sale.chassis_number || params.chassisNumber || "",
+          paymentType: sale.payment_type || params.paymentType || "cash",
+          financeDetails: sale.finance_details || params.financeDetails || "",
+          bikeColor: sale.bike_color || params.bikeColor || "",
+          hasInsurance: sale.has_insurance ? sale.insurance_type || "TPO PRIVATE" : params.hasInsurance || "No",
+          hasTracker: sale.has_tracker ? sale.tracker_duration || "Yearly" : params.hasTracker || "No",
+          referralName: sale.referral_name || params.referralName || "",
+          deploymentName: sale.deployment_name || params.deploymentName || "",
+          invoiceNumber: sale.invoice_number || params.invoiceNumber || "",
           saleDate: sale.invoice_date || today,
           quantity: String(sale.quantity_purchased || 1),
         })
-        setExistingDocuments({
-          invoicePhoto: sale.invoice_photo_url || null,
-          salesAgreementPhoto: sale.sales_agreement_photo_url || null,
-          idDocument: sale.id_document_url || null,
-          kraDocument: sale.kra_document_url || null,
-          bikePhoto: sale.bike_photo_url || null,
-          chassisPhoto: sale.chassis_photo_url || null,
-        })
+        setExistingDocuments((current) => ({
+          invoicePhoto: sale.invoice_photo_url || current.invoicePhoto || null,
+          salesAgreementPhoto: sale.sales_agreement_photo_url || current.salesAgreementPhoto || null,
+          idDocument: sale.id_document_url || current.idDocument || null,
+          kraDocument: sale.kra_document_url || current.kraDocument || null,
+          bikePhoto: sale.bike_photo_url || current.bikePhoto || null,
+          chassisPhoto: sale.chassis_photo_url || current.chassisPhoto || null,
+        }))
       })
       .catch((err) => {
         if (cancelled) return
@@ -1126,6 +1152,15 @@ const s = StyleSheet.create({
   fileName: { fontSize: 13, color: "#166534", flex: 1, marginRight: 8 },
   removeFileBtn: { padding: 4 },
   removeFileText: { fontSize: 12, fontWeight: "600", color: "#dc2626" },
+  existingFile: { borderWidth: 1, borderColor: "#bfdbfe", borderRadius: 8, padding: 10, backgroundColor: "#eff6ff" },
+  existingFileCopy: { marginBottom: 8 },
+  existingFileTitle: { fontSize: 12, fontWeight: "700", color: "#1e40af" },
+  existingFileMeta: { fontSize: 10, color: "#64748b", marginTop: 2 },
+  existingFileActions: { flexDirection: "row", gap: 8 },
+  viewFileBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6, backgroundColor: "#dbeafe" },
+  viewFileText: { color: "#1d4ed8", fontSize: 12, fontWeight: "700" },
+  replaceFileBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6, backgroundColor: "#fff", borderWidth: 1, borderColor: "#93c5fd" },
+  replaceFileText: { color: "#1d4ed8", fontSize: 12, fontWeight: "700" },
 
   // Success/Error banners
   successBanner: {
