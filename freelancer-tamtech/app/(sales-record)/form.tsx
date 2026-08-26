@@ -109,9 +109,26 @@ const DOCUMENT_FIELDS = [
 //  Component 
 export default function SalesRecordForm() {
   const { user } = useAuthStore()
-  const { editId } = useLocalSearchParams<{ editId?: string }>()
+  const params = useLocalSearchParams<{
+    editId?: string
+    customerFullName?: string
+    bikeModel?: string
+    paymentType?: string
+    invoiceNumber?: string
+    saleDate?: string
+    quantity?: string
+  }>()
+  const { editId } = params
   const isEditing = Boolean(editId)
-  const [form, setForm] = useState<FormState>(INITIAL_FORM)
+  const [form, setForm] = useState<FormState>(() => ({
+    ...INITIAL_FORM,
+    customerFullName: params.customerFullName || "",
+    bikeModel: params.bikeModel || "",
+    paymentType: params.paymentType === "loan" ? "loan" : "cash",
+    invoiceNumber: params.invoiceNumber === "—" ? "" : params.invoiceNumber || "",
+    saleDate: params.saleDate || today,
+    quantity: params.quantity || "1",
+  }))
   const [files, setFiles] = useState<Record<string, FileAttachment | null>>({})
   const [submitting, setSubmitting] = useState(false)
   const [preview, setPreview] = useState<FormState | null>(null)
@@ -148,7 +165,14 @@ export default function SalesRecordForm() {
           quantity: String(sale.quantity_purchased || 1),
         })
       })
-      .catch((err) => { if (!cancelled) setError(err?.response?.data?.error || err?.message || "Failed to load sale for editing.") })
+      .catch((err) => {
+        if (cancelled) return
+        if (err?.response?.status === 404) {
+          setError("The form is prefilled from sales history. Deploy the backend sales edit route before saving changes.")
+          return
+        }
+        setError(err?.response?.data?.error || err?.message || "Failed to load additional sale details.")
+      })
       .finally(() => { if (!cancelled) setSubmitting(false) })
     return () => { cancelled = true }
   }, [editId])
