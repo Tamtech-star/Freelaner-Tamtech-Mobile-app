@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Linking,
 } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import * as ImagePicker from "expo-image-picker"
@@ -117,6 +118,12 @@ export default function SalesRecordForm() {
     invoiceNumber?: string
     saleDate?: string
     quantity?: string
+    invoicePhotoUrl?: string
+    agreementPhotoUrl?: string
+    idDocumentUrl?: string
+    kraDocumentUrl?: string
+    bikePhotoUrl?: string
+    chassisPhotoUrl?: string
   }>()
   const { editId } = params
   const isEditing = Boolean(editId)
@@ -130,6 +137,14 @@ export default function SalesRecordForm() {
     quantity: params.quantity || "1",
   }))
   const [files, setFiles] = useState<Record<string, FileAttachment | null>>({})
+  const [existingDocuments, setExistingDocuments] = useState<Record<string, string | null>>({
+    invoicePhoto: params.invoicePhotoUrl || null,
+    salesAgreementPhoto: params.agreementPhotoUrl || null,
+    idDocument: params.idDocumentUrl || null,
+    kraDocument: params.kraDocumentUrl || null,
+    bikePhoto: params.bikePhotoUrl || null,
+    chassisPhoto: params.chassisPhotoUrl || null,
+  })
   const [submitting, setSubmitting] = useState(false)
   const [preview, setPreview] = useState<FormState | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -163,6 +178,14 @@ export default function SalesRecordForm() {
           invoiceNumber: sale.invoice_number || "",
           saleDate: sale.invoice_date || today,
           quantity: String(sale.quantity_purchased || 1),
+        })
+        setExistingDocuments({
+          invoicePhoto: sale.invoice_photo_url || null,
+          salesAgreementPhoto: sale.sales_agreement_photo_url || null,
+          idDocument: sale.id_document_url || null,
+          kraDocument: sale.kra_document_url || null,
+          bikePhoto: sale.bike_photo_url || null,
+          chassisPhoto: sale.chassis_photo_url || null,
         })
       })
       .catch((err) => {
@@ -375,10 +398,14 @@ export default function SalesRecordForm() {
       }
 
       if (isEditing && editId) {
-        await api.patch(`/sales-record/${editId}`, {
-          ...payload,
-          editedBy: user?.name || "sales-record.mobile",
-        })
+        const editForm = new FormData()
+        for (const [key, value] of Object.entries(payload)) {
+          if (value === null || value === undefined) continue
+          if (typeof value === "object") editForm.append(key, value as any)
+          else editForm.append(key, value)
+        }
+        editForm.append("editedBy", user?.name || "sales-record.mobile")
+        await api.patch(`/sales-record/${editId}`, editForm)
         setSuccess("Sale updated successfully. Matching and commission/referral checks were re-run.")
         setPreview(null)
         return
@@ -425,6 +452,7 @@ export default function SalesRecordForm() {
   //  Render file picker button 
   const renderFilePicker = (field: (typeof DOCUMENT_FIELDS)[number]) => {
     const file = files[field.key]
+    const existingUrl = existingDocuments[field.key]
     return (
       <View key={field.key} style={s.fileField}>
         <Text style={s.fieldLabel}>
@@ -438,6 +466,21 @@ export default function SalesRecordForm() {
             <TouchableOpacity onPress={() => removeFile(field.key)} style={s.removeFileBtn}>
               <Text style={s.removeFileText}>Remove</Text>
             </TouchableOpacity>
+          </View>
+        ) : existingUrl ? (
+          <View style={s.existingFile}>
+            <View style={s.existingFileCopy}>
+              <Text style={s.existingFileTitle}>Existing document retained</Text>
+              <Text style={s.existingFileMeta} numberOfLines={1}>{existingUrl}</Text>
+            </View>
+            <View style={s.existingFileActions}>
+              <TouchableOpacity onPress={() => Linking.openURL(existingUrl)} style={s.viewFileBtn}>
+                <Text style={s.viewFileText}>View</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleAddFile(field.key)} style={s.replaceFileBtn}>
+                <Text style={s.replaceFileText}>Replace</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <TouchableOpacity onPress={() => handleAddFile(field.key)} style={s.filePickerBtn}>

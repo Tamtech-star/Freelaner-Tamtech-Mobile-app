@@ -431,6 +431,12 @@ export default function SalesRecordHome() {
                         invoiceNumber: selectedRow.sales_invoice_number,
                         saleDate: selectedRow.sale_date,
                         quantity: String(selectedRow.quantity),
+                        invoicePhotoUrl: selectedRow.invoice_photo_url || "",
+                        agreementPhotoUrl: selectedRow.agreement_photo_url || "",
+                        idDocumentUrl: selectedRow.id_doc_url || "",
+                        kraDocumentUrl: selectedRow.kra_doc_url || "",
+                        bikePhotoUrl: selectedRow.bike_photo_url || "",
+                        chassisPhotoUrl: selectedRow.chassis_photo_url || "",
                       },
                     })
                   }}
