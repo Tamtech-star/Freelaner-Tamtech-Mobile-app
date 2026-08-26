@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native"
-import { router } from "expo-router"
+import { router, useLocalSearchParams } from "expo-router"
 import * as ImagePicker from "expo-image-picker"
 import { Directory, File, Paths } from "expo-file-system"
 import DropDownPicker from "react-native-dropdown-picker"
@@ -19,6 +19,7 @@ import { insertPendingSalesRecord } from "../../src/offline/database"
 import { buildPendingSalesRecord } from "../../src/offline/syncCore"
 import { runSyncWorker, type OfflineSubmissionPayload } from "../../src/offline/syncWorker"
 import { compressImageForUpload } from "../../src/utils/imageCompression"
+import api from "../../src/api/client"
 
 //  Constants 
 const BIKE_MODELS = [
@@ -108,12 +109,49 @@ const DOCUMENT_FIELDS = [
 //  Component 
 export default function SalesRecordForm() {
   const { user } = useAuthStore()
+  const { editId } = useLocalSearchParams<{ editId?: string }>()
+  const isEditing = Boolean(editId)
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [files, setFiles] = useState<Record<string, FileAttachment | null>>({})
   const [submitting, setSubmitting] = useState(false)
   const [preview, setPreview] = useState<FormState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!editId) return
+    let cancelled = false
+    setSubmitting(true)
+    void api.get(`/sales-record/${editId}`)
+      .then(({ data }) => {
+        if (cancelled) return
+        const sale = data.sale || {}
+        setForm({
+          customerType: sale.customer_type || "individual",
+          customerFullName: sale.customer_full_name || "",
+          customerIdNumber: sale.customer_id_number || "",
+          customerPhone: sale.customer_phone || "",
+          kraPin: sale.kra_pin || "",
+          customerLocation: sale.customer_location || "",
+          bikeModel: sale.bike_model_sold || "",
+          bikeRegistrationNumber: sale.bike_registration_number || "",
+          chassisNumber: sale.chassis_number || "",
+          paymentType: sale.payment_type || "cash",
+          financeDetails: sale.finance_details || "",
+          bikeColor: sale.bike_color || "",
+          hasInsurance: sale.has_insurance ? sale.insurance_type || "TPO PRIVATE" : "No",
+          hasTracker: sale.has_tracker ? sale.tracker_duration || "Yearly" : "No",
+          referralName: sale.referral_name || "",
+          deploymentName: sale.deployment_name || "",
+          invoiceNumber: sale.invoice_number || "",
+          saleDate: sale.invoice_date || today,
+          quantity: String(sale.quantity_purchased || 1),
+        })
+      })
+      .catch((err) => { if (!cancelled) setError(err?.response?.data?.error || err?.message || "Failed to load sale for editing.") })
+      .finally(() => { if (!cancelled) setSubmitting(false) })
+    return () => { cancelled = true }
+  }, [editId])
 
   // DropDownPicker state for each picker
   const [customerTypeOpen, setCustomerTypeOpen] = useState(false)
@@ -257,7 +295,7 @@ export default function SalesRecordForm() {
 
     // Check required document uploads
     const requiredDocs = DOCUMENT_FIELDS.filter((d) => d.required)
-    for (const doc of requiredDocs) {
+    for (const doc of isEditing ? [] : requiredDocs) {
       if (!files[doc.key]) {
         Alert.alert("Required Document", `Please upload: ${doc.label}`)
         return
@@ -265,7 +303,7 @@ export default function SalesRecordForm() {
     }
 
     setPreview({ ...form })
-  }, [form, files])
+  }, [form, files, isEditing])
 
   //  Submit 
   const handleSubmit = useCallback(async () => {
@@ -312,6 +350,16 @@ export default function SalesRecordForm() {
         }
       }
 
+      if (isEditing && editId) {
+        await api.patch(`/sales-record/${editId}`, {
+          ...payload,
+          editedBy: user?.name || "sales-record.mobile",
+        })
+        setSuccess("Sale updated successfully. Matching and commission/referral checks were re-run.")
+        setPreview(null)
+        return
+      }
+
       const localDocuments = {
         invoice_photo_url: typeof payload.invoicePhoto === "object" && payload.invoicePhoto ? payload.invoicePhoto.uri : null,
         agreement_photo_url: typeof payload.salesAgreementPhoto === "object" && payload.salesAgreementPhoto ? payload.salesAgreementPhoto.uri : null,
@@ -348,7 +396,7 @@ export default function SalesRecordForm() {
     } finally {
       setSubmitting(false)
     }
-  }, [preview, form, files, user])
+  }, [preview, form, files, user, editId, isEditing])
 
   //  Render file picker button 
   const renderFilePicker = (field: (typeof DOCUMENT_FIELDS)[number]) => {
@@ -383,7 +431,7 @@ export default function SalesRecordForm() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Sales Record</Text>
+        <Text style={s.headerTitle}>{isEditing ? "Edit Sale Record" : "Sales Record"}</Text>
       </View>
 
       <ScrollView
@@ -889,9 +937,9 @@ export default function SalesRecordForm() {
 
               <TouchableOpacity
                 onPress={() => {
-                  Alert.alert("Confirm", "Are you sure you want to submit this sale record?", [
+                  Alert.alert("Confirm", isEditing ? "Save these changes and re-run sale matching?" : "Are you sure you want to submit this sale record?", [
                     { text: "Cancel", style: "cancel" },
-                    { text: "Confirm & Submit", onPress: handleSubmit },
+                    { text: isEditing ? "Save Changes" : "Confirm & Submit", onPress: handleSubmit },
                   ])
                 }}
                 disabled={submitting}
@@ -900,7 +948,7 @@ export default function SalesRecordForm() {
                 {submitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={s.confirmBtnText}>Confirm & Submit</Text>
+                  <Text style={s.confirmBtnText}>{isEditing ? "Save Changes" : "Confirm & Submit"}</Text>
                 )}
               </TouchableOpacity>
             </View>

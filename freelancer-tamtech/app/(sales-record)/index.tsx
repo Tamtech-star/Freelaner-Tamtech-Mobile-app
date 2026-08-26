@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native"
-import { Download } from "lucide-react-native"
+import { Download, Pencil } from "lucide-react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import type { SalesRecordItem } from "../../src/api/salesRecord"
@@ -419,6 +419,28 @@ export default function SalesRecordHome() {
                 })()}
 
                 <TouchableOpacity
+                  onPress={() => {
+                    setSelectedRow(null)
+                    router.push({
+                      pathname: "/(sales-record)/form",
+                      params: {
+                        editId: selectedRow.id,
+                        customerFullName: selectedRow.customer_name,
+                        bikeModel: selectedRow.bike_model_sold,
+                        paymentType: selectedRow.payment_type || "cash",
+                        invoiceNumber: selectedRow.sales_invoice_number,
+                        saleDate: selectedRow.sale_date,
+                        quantity: String(selectedRow.quantity),
+                      },
+                    })
+                  }}
+                  style={s.editBtn}
+                >
+                  <Pencil size={16} color="#1d4ed8" />
+                  <Text style={s.editBtnText}>Edit Sale</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
                   onPress={() => setSelectedRow(null)}
                   style={s.closeBtn}
                 >
@@ -618,6 +640,8 @@ const s = StyleSheet.create({
   detailRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   detailLabel: { fontSize: 14, fontWeight: "700", color: "#0f172a" },
   detailValue: { fontSize: 14, color: "#334155" },
+  editBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#eff6ff", borderRadius: 8, paddingVertical: 12, marginTop: 16 },
+  editBtnText: { color: "#1d4ed8", fontSize: 14, fontWeight: "700" },
   closeBtn: {
     backgroundColor: "#f1f5f9",
     paddingVertical: 12,
