@@ -355,6 +355,7 @@ export default function SalesRecordHome() {
 
                   {/* Row 2: Customer + Invoice */}
                   <Text style={s.customerName}>{item.customer_name}</Text>
+                  <Text style={s.customerIdText}>Customer ID: {item.customer_id_number || "—"}</Text>
                   <View style={s.histRow2}>
                     <Text style={s.invoiceNum}>#{item.sales_invoice_number}</Text>
                     <Text style={s.bikeModel}>{item.bike_model_sold}</Text>
@@ -395,6 +396,7 @@ export default function SalesRecordHome() {
                 <View style={s.detailBody}>
                   <DetailRow label="Type" value={selectedRow.submission_type === "direct_sale" ? "Direct Sale" : "Freelancer Lead"} />
                   <DetailRow label="Customer" value={selectedRow.customer_name} />
+                  <DetailRow label="Customer ID" value={selectedRow.customer_id_number || "—"} />
                   <DetailRow label="Freelancer" value={selectedRow.freight} />
                   <DetailRow label="Agent" value={selectedRow.sales_agent_name} />
                   <DetailRow label="Invoice" value={selectedRow.sales_invoice_number} />
@@ -646,6 +648,7 @@ const s = StyleSheet.create({
   conversionCode: { fontFamily: "monospace", fontSize: 12, fontWeight: "700", color: "#1d4ed8" },
   typeBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
   typeBadgeText: { fontSize: 10, fontWeight: "700" },
+  customerIdText: { fontSize: 11, color: "#64748b", marginTop: 3, marginBottom: 4 },
   customerName: { marginTop: 4, fontSize: 14, fontWeight: "600", color: "#1e293b" },
   histRow2: { marginTop: 4, flexDirection: "row", alignItems: "center", gap: 12 },
   invoiceNum: { fontFamily: "monospace", fontSize: 12, color: "#64748b" },
