@@ -58,3 +58,8 @@ Desktop.ini
 # IDE / Claude config.claude
 CLAUDE.md
 AGENTS.md
+.claude/
+.continueignore
+.ts-trace
+
+.expo-*/
