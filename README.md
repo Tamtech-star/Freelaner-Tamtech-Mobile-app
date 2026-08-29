@@ -1,9 +1,20 @@
 # Freelancer-Tamtech Mobile App
 
-Freelancer-Tamtech is an Expo/React Native mobile client for Tamtech Tools Ltd. It provides role-based access for sales agents, administrators, and freelancers, together with offline sales-record capture and local caching of selected portal data.
+Freelancer-Tamtech is an Expo/React Native mobile client for Tamtech Tools Ltd. It provides role-based access for sales agents, administrators, and freelancers, together with offline sales-record capture, editable sales history, local caching of selected portal data, and an interactive Virtual Showroom for freelancer product education.
 
 This README describes the mobile project in `freelancer-tamtech/`. It does not document the backend API implementation, the web portal, or the ignored `spirospares.referance/` copy.
-spirospares.referance is the directive  folder where the website mimic of it exists and where the backend API implementation exists. Make contact or alias with the spirospares Backend API folders if need for Backend chnages is required.
+
+`freelancer-tamtech/spirospares.referance/` is the local authoritative reference copy of the separately deployed Spiro Spares website/backend. Changes made there are not deployed with the Expo app: copy each changed backend file to the real backend and run any accompanying Supabase migration explicitly.
+
+## Current Feature Highlights
+
+- Role-based mobile experiences for sales agents, administrators, freelancers, and public users.
+- Offline-first sales recording with durable document files, SQLite outbox persistence, retry, and synchronization.
+- Searchable, date-filtered sales history with CSV export and document viewing.
+- Existing-sale editing with a prefilled form, remote document retention, optional replacement uploads, and backend matching reconciliation.
+- Freelancer Virtual Showroom with an interactive EKON450 M1V3 studio, colour galleries, feature hotspots, sound effects, and ambient audio.
+- Guided purchase education covering hire purchase and cash purchase, animated guides, and narrated explanations.
+- Backend-owned forward and retroactive customer-ID matching, freelancer commission invoices, admin notifications, and pending-payment review.
 
 ## Responsibilities
 
@@ -12,10 +23,12 @@ The mobile app is responsible for:
 - Authenticating users through the mobile login endpoint.
 - Selecting the mobile experience from the authenticated user role.
 - Capturing sales records and document attachments.
+- Prefilling and editing previously synchronized sales records.
 - Persisting pending sales locally when a submission cannot be sent immediately.
 - Uploading queued submissions when connectivity is available.
 - Caching sales history, freelancers, and other mobile data used by the screens.
 - Displaying the authoritative data returned by the backend after synchronization.
+- Presenting the code-driven Virtual Showroom and purchase guides with bundled image and audio assets.
 
 The backend remains responsible for:
 
@@ -25,6 +38,7 @@ The backend remains responsible for:
 - Deciding whether a record is a direct sale or freelancer conversion.
 - Storing uploaded documents and returning their server URLs.
 - Commission calculation, approval, payment, and payment status.
+- Re-running lead/referral matching when an existing sale is edited.
 
 The mobile app must not treat a local placeholder or a local payment status as the final business decision.
 
@@ -54,6 +68,7 @@ freelancer-tamtech/
 │   ├── login.tsx                Login screen
 │   ├── (admin)/                 Admin screens
 │   ├── (freelancer)/            Freelancer screens
+│   │   └── showroom/             Virtual Showroom hub, bike studio, and purchase guide
 │   ├── (public)/                Public registration/referral screens
 │   └── (sales-record)/          Sales-agent screens and sales form
 ├── src/
@@ -64,6 +79,8 @@ freelancer-tamtech/
 │   ├── types/                   Shared mobile TypeScript types
 │   └── utils/                   Compression, CSV, filtering, display, and network helpers
 ├── assets/                      App icons, splash assets, and other bundled assets
+│   ├── images/bikes/             Showroom bike and colour-gallery images
+│   └── sounds/                   Showroom ambience, hotspot effects, and narration
 ├── tests/                       Focused unit tests for mobile utilities and sync policy
 ├── app.json                     Expo application configuration
 ├── eas.json                     EAS preview/production build profiles
@@ -153,6 +170,8 @@ The `--clear` option clears Metro's cache and is useful after dependency or rout
 | Public | `(public)` | Registration and referral flows |
 
 The role is returned by `/auth/mobile-login` and persisted in SecureStore with the token and user data.
+
+Freelancers can open the Virtual Showroom from their experience. Sales agents can open synchronized sales-history records, inspect their documents, and launch the same sales form in edit mode.
 
 ## Authentication
 
@@ -291,6 +310,20 @@ The local pending row stores durable local file URIs so an offline submission ca
 
 After successful synchronization, the backend-provided document URLs are the authoritative values shown in history/detail views.
 
+### Editing an Existing Sale
+
+Sales history supports editing records that have already synchronized with the backend:
+
+1. The history/detail view uses the authoritative `sale_conversions.id` as `editId`.
+2. The form is prefilled from the complete cached history row so it remains useful while the detail request is loading.
+3. `GET /sales-record/:id` enriches the form with the latest server values when the backend route is deployed.
+4. Existing remote document URLs are displayed separately from newly selected local replacement files.
+5. Unchanged remote documents are retained; only newly selected files are uploaded as replacements.
+6. Saving sends multipart `PATCH /sales-record/:id` and identifies the editor.
+7. The backend updates the conversion and re-runs matching when the customer ID changes, preserving the distinction between freelancer leads and public referrals.
+
+The edit route depends on the separately deployed backend implementation and its sales-history schema migrations. If that backend route has not been transferred yet, the mobile form retains its history-based prefill and reports the deployment dependency instead of clearing the form.
+
 ### Payment and Approval Status
 
 The mobile outbox uses `payment_status: "pending"` for a new local row. This only describes the local initial state. Payment approval and commission processing are server-owned workflows.
@@ -302,6 +335,52 @@ The following statuses should not be conflated:
 - `submission_type`: whether the backend classified the record as a direct sale or freelancer-lead submission.
 
 Successful upload does not itself mean commission has been approved or paid.
+
+### Conversion Matching and Pending Payments
+
+Customer-ID matching is backend-owned and supports both event orders:
+
+| First event | Second event | Result |
+| --- | --- | --- |
+| Freelancer lead | Sale record | Sale links to the lead, the lead converts, and a freelancer commission invoice is created. |
+| Direct sale | Freelancer lead | The retroactive matcher claims the direct sale, links the new lead, converts it, and creates the same commission invoice. |
+| Public referral | Sale record, in either order | Referral converts without a freelancer invoice and remains in the separate manual referral-payout workflow. |
+
+Freelancer commission invoices are calculated from quantity and the configured per-unit rate (default `KES 2,000`) and enter the admin queue with `invoice_status: pending_admin`. The deployed Supabase schema must include `pending_admin` in the `commission_invoices.invoice_status` constraint. The mobile app displays the server result but does not calculate, approve, or pay commissions itself.
+
+## Virtual Showroom
+
+The Virtual Showroom is a lightweight, code-driven React Native experience under `app/(freelancer)/showroom/`. It uses local images, Expo AV, gradients, and Reanimated rather than bundled MP4 video.
+
+### Showroom Hub
+
+`showroom/index.tsx` presents two experiences:
+
+- **Know Your Bike** — interactive product studio.
+- **How to Purchase** — ownership and financing education.
+
+The hub plays looping ambient audio while focused, pauses it when opening a child experience, resumes it when returning, and stops/unloads it when leaving the showroom.
+
+### Know Your Bike
+
+`showroom/know-your-bike.tsx` and `src/data/bikeModels.ts` currently present the EKON450 M1V3 with:
+
+- Available colour selection and local image galleries.
+- Animated presentation and pulsing tap targets.
+- Hotspots for motor, front suspension/braking, rear setup, dashboard, and comfort/storage.
+- Ambient studio audio and separate hotspot effects.
+- Safe pause, resume, stop, and unload handling across modal and route navigation.
+
+Bike specifications, prices, available colours, image imports, hotspot positions, and descriptions are defined in `src/data/bikeModels.ts`. Confirm the required local assets exist before adding or enabling a model/colour.
+
+### How to Purchase
+
+`showroom/financing.tsx` provides expandable purchase cards for:
+
+- Hire purchase through Watu Financing.
+- Cash purchase and immediate ownership.
+
+Each option includes key costs/requirements plus an animated guide with option-specific narration. Purchase figures are presentation content and should be reviewed when commercial terms change.
 
 ## Caching Other Data
 
@@ -455,6 +534,16 @@ That means the row is still represented by the local outbox/cache or the device 
 
 Upload synchronization and payment approval are separate. Confirm that the record exists on the backend, then use the backend's configured review/approval workflow. The mobile sync worker does not approve commission payments.
 
+If a converted freelancer sale is missing from Pending Payments, verify that the deployed database accepts `pending_admin`, that a `commission_invoices` row exists, and that the review endpoint is filtering that same status. For a sale-first/lead-later match, also confirm the retroactive matcher linked the conversion to the new lead.
+
+### Editing a sale shows a backend deployment message
+
+The cached sales-history row is still used to prefill the form. Transfer and deploy the backend `GET/PATCH /sales-record/:id` route and its required Supabase migration, then refresh sales history. Do not replace the conversion ID with a lead ID in the edit URL.
+
+### Showroom audio continues or fails to resume
+
+Showroom routes intentionally pause audio while navigating between experiences and stop/unload it when leaving or unmounting. Keep that lifecycle when modifying routes. Audio failures should not block visual interaction; confirm the referenced files under `assets/sounds/` exist and are valid audio files.
+
 ### A pending submission does not upload
 
 Check:
@@ -483,3 +572,5 @@ Changes to this mobile project affect the Expo client only. They do not automati
 - The ignored reference project.
 
 When a change depends on a backend contract, document the endpoint and expected response shape in the mobile API module and verify the deployed backend separately.
+
+For backend-reference work, finish with an exact transfer list and list SQL migrations separately. Copying a migration file is not sufficient—the SQL must also be executed against the deployed Supabase database.
