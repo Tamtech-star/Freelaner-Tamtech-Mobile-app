@@ -5,7 +5,7 @@ import { mobileLogin, logout as logoutApi, getStoredAuth } from '../api/auth'
 interface AuthActions {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
-  restoreSession: () => Promise<void>
+  restoreSession: () => Promise<UserRole | null>
   setUser: (user: AuthUser) => void
   setRole: (role: UserRole) => void
 }
@@ -73,11 +73,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           isAuthenticated: true,
           isLoading: false,
         })
+        return stored.role
       } else {
         set({ isLoading: false })
+        return null
       }
     } catch {
       set({ isLoading: false })
+      return null
     }
   },
 

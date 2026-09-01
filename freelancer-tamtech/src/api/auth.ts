@@ -2,6 +2,7 @@
 import * as SecureStore from 'expo-secure-store'
 import { STORAGE_KEYS } from '../constants/config'
 import type { AuthResponse, UserRole, AuthUser } from '../types'
+import { clearStoredAuthenticatedRoute } from '../navigation/routeStorage'
 
 export async function mobileLogin(
   email: string,
@@ -22,9 +23,12 @@ export async function mobileLogin(
 }
 
 export async function logout(): Promise<void> {
-  await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN)
-  await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_ROLE)
-  await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA)
+  await Promise.all([
+    SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN),
+    SecureStore.deleteItemAsync(STORAGE_KEYS.USER_ROLE),
+    SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA),
+    clearStoredAuthenticatedRoute(),
+  ])
 }
 
 export async function getStoredAuth(): Promise<{

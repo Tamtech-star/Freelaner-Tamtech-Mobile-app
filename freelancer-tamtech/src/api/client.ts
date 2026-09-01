@@ -1,6 +1,7 @@
 ﻿import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import * as SecureStore from 'expo-secure-store'
 import { API_BASE_URL, STORAGE_KEYS } from '../constants/config'
+import { clearStoredAuthenticatedRoute } from '../navigation/routeStorage'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -43,6 +44,7 @@ api.interceptors.response.use(
         await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN)
         await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_ROLE)
         await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA)
+        await clearStoredAuthenticatedRoute()
       } catch {
         // ignore cleanup errors
       }

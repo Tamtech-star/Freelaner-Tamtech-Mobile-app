@@ -19,6 +19,7 @@ export const STORAGE_KEYS = {
   AUTH_TOKEN: "auth_token",
   USER_ROLE: "user_role",
   USER_DATA: "user_data",
+  LAST_AUTH_ROUTE: "last_auth_route",
   PENDING_SUBMISSIONS: "pending_submissions",
   DRAFT_FORM: "draft_sales_form",
 }
