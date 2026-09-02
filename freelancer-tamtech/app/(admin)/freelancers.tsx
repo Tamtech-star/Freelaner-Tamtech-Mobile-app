@@ -230,13 +230,30 @@ export default function FreelancersScreen() {
       {/* Detail Modal */}
       <Modal visible={!!selectedFreelancer} animationType="slide" transparent>
         <View style={s.modalOverlay}>
-          <ScrollView style={s.modalCard}>
-            <Text style={s.modalTitle}>Freelancer Details</Text>
+          <View style={s.modalCard}>
+            <View style={s.modalHeader}>
+              <View style={s.modalHeaderText}>
+                <Text style={s.modalTitle}>Freelancer Details</Text>
+                {selectedFreelancer && <Text style={s.modalSub}>
+                  {selectedFreelancer.display_code || selectedFreelancer.freelancer_code}
+                </Text>}
+              </View>
+              <TouchableOpacity
+                style={s.headerCloseBtn}
+                onPress={() => setSelectedFreelancer(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Close freelancer details"
+              >
+                <Text style={s.headerCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={s.modalScroll}
+              contentContainerStyle={s.modalScrollContent}
+              showsVerticalScrollIndicator
+            >
             {selectedFreelancer && (
               <>
-                <Text style={s.modalSub}>
-                  {selectedFreelancer.display_code || selectedFreelancer.freelancer_code}
-                </Text>
                 <View style={s.detailSection}>
                   <Text style={s.detailLabel}>Full Name</Text>
                   <Text style={s.detailValue}>{selectedFreelancer.full_name}</Text>
@@ -287,14 +304,8 @@ export default function FreelancersScreen() {
                 </View>
               </>
             )}
-
-            <TouchableOpacity
-              style={s.closeBtn}
-              onPress={() => setSelectedFreelancer(null)}
-            >
-              <Text style={s.closeBtnText}>Close</Text>
-            </TouchableOpacity>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </View>
       </Modal>
     </View>
@@ -419,11 +430,33 @@ const s = StyleSheet.create({
   modalCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
-    padding: 20,
     maxHeight: "85%",
   },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", marginBottom: 4 },
-  modalSub: { fontSize: 12, color: "#64748b", marginBottom: 16, fontFamily: "monospace" },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    backgroundColor: "#fff",
+  },
+  modalHeaderText: { flex: 1, paddingRight: 12 },
+  modalScroll: { paddingHorizontal: 20 },
+  modalScrollContent: { paddingTop: 14, paddingBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a" },
+  modalSub: { fontSize: 12, color: "#64748b", marginTop: 3, fontFamily: "monospace" },
+  headerCloseBtn: {
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+  headerCloseText: { color: "#334155", fontSize: 13, fontWeight: "700" },
   detailSection: {
     backgroundColor: "#f8fafc",
     borderRadius: 10,
