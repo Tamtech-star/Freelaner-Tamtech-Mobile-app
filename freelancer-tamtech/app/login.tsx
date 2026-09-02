@@ -13,12 +13,14 @@ import {
 } from "react-native"
 import { Link, router } from "expo-router"
 import { LinearGradient } from "expo-linear-gradient"
+import { Eye, EyeOff } from "lucide-react-native"
 import { useAuthStore } from "../src/store/authStore"
 import { COLORS, SHADOWS } from "../src/constants/config"
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const { login, isLoading } = useAuthStore()
 
   const handleLogin = async () => {
@@ -100,14 +102,27 @@ export default function LoginScreen() {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor={COLORS.placeholder}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
+            <View style={styles.passwordInputWrap}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter your password"
+                placeholderTextColor={COLORS.placeholder}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity
+                style={styles.passwordVisibilityButton}
+                onPress={() => setShowPassword((visible) => !visible)}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                accessibilityHint={showPassword ? "Hides the password text" : "Shows the password text"}
+              >
+                {showPassword ? <EyeOff size={20} color={COLORS.muted} /> : <Eye size={20} color={COLORS.muted} />}
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -246,6 +261,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.heading,
     backgroundColor: COLORS.inputBg,
+  },
+  passwordInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.inputBorder,
+    borderRadius: 8,
+    backgroundColor: COLORS.inputBg,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: COLORS.heading,
+  },
+  passwordVisibilityButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   buttonWrapper: {
     marginTop: 8,
