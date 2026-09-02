@@ -16,9 +16,9 @@ import { router } from "expo-router"
 import { getConvertedSalesLocalFirst, syncConvertedSalesNow, type ConvertedSaleRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { formatPaymentMode, getFreelancerName } from "../../src/utils/salesDisplay"
-import { Download } from "lucide-react-native"
+import { Download, Share2 } from "lucide-react-native"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
-import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
+import { downloadSalesCsv, shareSalesCsv } from "../../src/utils/salesCsvDownload"
 import { SalesDateFilterControl } from "../../src/components/SalesDateFilterControl"
 import { applySalesDateFilter, DEFAULT_SALES_DATE_FILTER, type SalesDateFilter } from "../../src/utils/salesDateFilter"
 
@@ -39,6 +39,7 @@ export default function ConvertedSalesScreen() {
   const [search, setSearch] = useState("")
   const [selectedSale, setSelectedSale] = useState<ConvertedSaleRow | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const [dateFilter, setDateFilter] = useState<SalesDateFilter>(DEFAULT_SALES_DATE_FILTER)
 
   const load = useCallback(async () => {
@@ -76,10 +77,22 @@ export default function ConvertedSalesScreen() {
     setDownloading(true)
     try {
       await downloadSalesCsv(filtered, "Freelancer Lead Sales")
+      Alert.alert("Download Complete", "The freelancer lead sales CSV was saved to the folder you selected.")
     } catch (err: any) {
       Alert.alert("Download Failed", err?.message || "Could not create the freelancer lead sales CSV file.")
     } finally {
       setDownloading(false)
+    }
+  }
+
+  const handleCsvShare = async () => {
+    setSharing(true)
+    try {
+      await shareSalesCsv(filtered, "Freelancer Lead Sales")
+    } catch (err: any) {
+      Alert.alert("Share Failed", err?.message || "Could not share the freelancer lead sales CSV file.")
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -108,7 +121,7 @@ export default function ConvertedSalesScreen() {
   return (
     <View style={s.container}>
       <View style={s.brandBar}>
-        <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
+        <Text style={s.brandText}></Text>
       </View>
 
       <ScrollView
@@ -126,7 +139,11 @@ export default function ConvertedSalesScreen() {
           <View style={s.headerActions}>
             <TouchableOpacity onPress={handleCsvDownload} style={[s.csvBtn, (downloading || filtered.length === 0) && s.disabledBtn]} disabled={downloading || filtered.length === 0}>
               {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
-              <Text style={s.csvBtnText}>{downloading ? "Preparing" : "CSV"}</Text>
+              <Text style={s.csvBtnText}>{downloading ? "Saving" : "Download"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleCsvShare} style={[s.shareBtn, (sharing || filtered.length === 0) && s.disabledBtn]} disabled={sharing || filtered.length === 0}>
+              {sharing ? <ActivityIndicator size="small" color="#fff" /> : <Share2 size={16} color="#fff" />}
+              <Text style={s.csvBtnText}>{sharing ? "Preparing" : "Share"}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
               <Text style={s.backText}>Back</Text>
@@ -357,6 +374,17 @@ const s = StyleSheet.create({
     backgroundColor: "#10b981",
     paddingHorizontal: 12,
     paddingVertical: 7,
+    borderRadius: 8,
+  },
+  shareBtn: {
+    minWidth: 76,
+    height: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 12,
     borderRadius: 8,
   },
   csvBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },

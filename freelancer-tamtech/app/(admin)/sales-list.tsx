@@ -12,13 +12,13 @@ import {
   Modal,
   Alert,
 } from "react-native"
-import { Download } from "lucide-react-native"
+import { Download, Share2 } from "lucide-react-native"
 import { router, useLocalSearchParams } from "expo-router"
 import { getAllSalesLocalFirst, getConvertedSalesLocalFirst, syncAllSalesNow, syncConvertedSalesNow, type ConvertedSaleRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { formatPaymentMode, getFreelancerName } from "../../src/utils/salesDisplay"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
-import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
+import { downloadSalesCsv, shareSalesCsv } from "../../src/utils/salesCsvDownload"
 import { SalesDateFilterControl } from "../../src/components/SalesDateFilterControl"
 import { applySalesDateFilter, DEFAULT_SALES_DATE_FILTER, type SalesDateFilter } from "../../src/utils/salesDateFilter"
 
@@ -40,6 +40,7 @@ export default function SalesListScreen() {
   const [agentSearch, setAgentSearch] = useState("")
   const [selectedSale, setSelectedSale] = useState<ConvertedSaleRow | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const [dateFilter, setDateFilter] = useState<SalesDateFilter>(DEFAULT_SALES_DATE_FILTER)
 
   const isFreelancer = filter === "freelancer"
@@ -142,10 +143,22 @@ export default function SalesListScreen() {
     setDownloading(true)
     try {
       await downloadSalesCsv(filtered, getTitle())
+      Alert.alert("Download Complete", "The sales CSV was saved to the folder you selected.")
     } catch (err: any) {
       Alert.alert("Download Failed", err?.message || "Could not create the sales CSV file.")
     } finally {
       setDownloading(false)
+    }
+  }, [filtered, filter, isFreelancer])
+
+  const handleShareCsv = useCallback(async () => {
+    setSharing(true)
+    try {
+      await shareSalesCsv(filtered, getTitle())
+    } catch (err: any) {
+      Alert.alert("Share Failed", err?.message || "Could not share the sales CSV file.")
+    } finally {
+      setSharing(false)
     }
   }, [filtered, filter, isFreelancer])
 
@@ -170,7 +183,11 @@ export default function SalesListScreen() {
           <View style={s.headerActions}>
             <TouchableOpacity onPress={handleDownloadCsv} style={[s.downloadBtn, (downloading || filtered.length === 0) && s.disabledBtn]} disabled={downloading || filtered.length === 0}>
               {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
-              <Text style={s.downloadText}>{downloading ? "Preparing" : "CSV"}</Text>
+              <Text style={s.downloadText}>{downloading ? "Saving" : "Download"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleShareCsv} style={[s.shareBtn, (sharing || filtered.length === 0) && s.disabledBtn]} disabled={sharing || filtered.length === 0}>
+              {sharing ? <ActivityIndicator size="small" color="#fff" /> : <Share2 size={16} color="#fff" />}
+              <Text style={s.downloadText}>{sharing ? "Preparing" : "Share"}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
               <Text style={s.backText}>Back</Text>
@@ -392,6 +409,7 @@ const s = StyleSheet.create({
   backBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: "#e2e8f0" },
   backText: { fontSize: 13, fontWeight: "500", color: "#64748b" },
   downloadBtn: { minWidth: 82, height: 36, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#059669", paddingHorizontal: 12 },
+  shareBtn: { minWidth: 76, height: 36, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#2563eb", paddingHorizontal: 12 },
   downloadText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   disabledBtn: { opacity: 0.5 },
 

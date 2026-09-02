@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native"
-import { Download, Pencil } from "lucide-react-native"
+import { Download, Pencil, Share2 } from "lucide-react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import type { SalesRecordItem } from "../../src/api/salesRecord"
@@ -22,7 +22,7 @@ import { getSalesHistoryLocalFirst, syncSalesHistoryNow } from "../../src/api/sa
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { getFreelancerCardName } from "../../src/utils/salesDisplay"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
-import { downloadSalesCsv } from "../../src/utils/salesCsvDownload"
+import { downloadSalesCsv, shareSalesCsv } from "../../src/utils/salesCsvDownload"
 import { SalesDateFilterControl } from "../../src/components/SalesDateFilterControl"
 import { applySalesDateFilter, DEFAULT_SALES_DATE_FILTER, type SalesDateFilter } from "../../src/utils/salesDateFilter"
 
@@ -56,6 +56,7 @@ export default function SalesRecordHome() {
   const [selectedRow, setSelectedRow] = useState<SaleRecordRow | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const [dateFilter, setDateFilter] = useState<SalesDateFilter>(DEFAULT_SALES_DATE_FILTER)
 
   const loadHistory = useCallback(async () => {
@@ -136,10 +137,22 @@ export default function SalesRecordHome() {
     setDownloading(true)
     try {
       await downloadSalesCsv(filteredRows, "Sales Record History")
+      Alert.alert("Download Complete", "The sales history CSV was saved to the folder you selected.")
     } catch (err: any) {
       Alert.alert("Download Failed", err?.message || "Could not create the sales history CSV file.")
     } finally {
       setDownloading(false)
+    }
+  }, [filteredRows])
+
+  const handleShareCsv = useCallback(async () => {
+    setSharing(true)
+    try {
+      await shareSalesCsv(filteredRows, "Sales Record History")
+    } catch (err: any) {
+      Alert.alert("Share Failed", err?.message || "Could not share the sales history CSV file.")
+    } finally {
+      setSharing(false)
     }
   }, [filteredRows])
 
@@ -171,7 +184,7 @@ export default function SalesRecordHome() {
     <View style={s.container}>
       {/* Brand Bar */}
       <View style={s.brandBar}>
-        <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
+        <Text style={s.brandText}></Text>
       </View>
 
       <ScrollView
@@ -290,7 +303,11 @@ export default function SalesRecordHome() {
             <View style={s.modalActions}>
               <TouchableOpacity onPress={handleDownloadCsv} style={[s.downloadBtn, (downloading || filteredRows.length === 0) && s.disabledBtn]} disabled={downloading || filteredRows.length === 0}>
                 {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
-                <Text style={s.downloadText}>{downloading ? "Preparing" : "CSV"}</Text>
+                <Text style={s.downloadText}>{downloading ? "Saving" : "Download"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleShareCsv} style={[s.shareBtn, (sharing || filteredRows.length === 0) && s.disabledBtn]} disabled={sharing || filteredRows.length === 0}>
+                {sharing ? <ActivityIndicator size="small" color="#fff" /> : <Share2 size={16} color="#fff" />}
+                <Text style={s.downloadText}>{sharing ? "Preparing" : "Share"}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => {
@@ -614,6 +631,7 @@ const s = StyleSheet.create({
   },
   modalCloseText: { fontSize: 12, fontWeight: "500", color: "#64748b" },
   downloadBtn: { minWidth: 82, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#059669", paddingHorizontal: 12 },
+  shareBtn: { minWidth: 76, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#2563eb", paddingHorizontal: 12 },
   downloadText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   disabledBtn: { opacity: 0.5 },
 

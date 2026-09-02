@@ -83,7 +83,7 @@ export default function AdminDashboardScreen() {
     <View style={s.container}>
       {/* Brand Bar */}
       <View style={s.brandBar}>
-        <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
+        <Text style={s.brandText}></Text>
       </View>
 
       <ScrollView

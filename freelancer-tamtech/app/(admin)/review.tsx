@@ -204,7 +204,7 @@ export default function ReviewQueueScreen() {
   return (
     <View style={s.container}>
       <View style={s.brandBar}>
-        <Text style={s.brandText}>TAMTECH TOOLS LTD</Text>
+        <Text style={s.brandText}></Text>
       </View>
 
       <ScrollView

@@ -166,6 +166,21 @@ export interface ConvertedSaleRow {
   kra_doc_url?: string | null
   bike_photo_url?: string | null
   chassis_photo_url?: string | null
+  customer_type?: string | null
+  customer_id_number?: string | null
+  customer_phone?: string | null
+  kra_pin?: string | null
+  customer_location?: string | null
+  bike_registration_number?: string | null
+  chassis_number?: string | null
+  finance_details?: string | null
+  bike_color?: string | null
+  has_insurance?: boolean | null
+  insurance_type?: string | null
+  has_tracker?: boolean | null
+  tracker_duration?: string | null
+  referral_name?: string | null
+  deployment_name?: string | null
 }
 
 export interface PaymentRecordRow {
