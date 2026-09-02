@@ -15,6 +15,7 @@ import {
 import { Download } from "lucide-react-native"
 import { router } from "expo-router"
 import { getFreelancersLocalFirst, syncFreelancersNow, deleteFreelancer, type FreelancerRow } from "../../src/api/admin"
+import { getFreelancerDashboard, type DashboardPayload } from "../../src/api/portal"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 import { downloadFreelancersCsv } from "../../src/utils/freelancerCsvDownload"
@@ -38,6 +39,9 @@ export default function FreelancersScreen() {
   const [selectedFreelancer, setSelectedFreelancer] = useState<FreelancerRow | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
+  const [freelancerDashboard, setFreelancerDashboard] = useState<DashboardPayload | null>(null)
+  const [dashboardLoading, setDashboardLoading] = useState(false)
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -103,6 +107,20 @@ export default function FreelancersScreen() {
       Alert.alert("Download Failed", err?.message || "Could not create the freelancers CSV file.")
     } finally {
       setDownloading(false)
+    }
+  }
+
+  const openFreelancerDetails = async (freelancer: FreelancerRow) => {
+    setSelectedFreelancer(freelancer)
+    setFreelancerDashboard(null)
+    setDashboardError(null)
+    setDashboardLoading(true)
+    try {
+      setFreelancerDashboard(await getFreelancerDashboard(freelancer.freelancer_code))
+    } catch (err: any) {
+      setDashboardError(err?.response?.data?.error || err?.message || "Failed to load freelancer metrics.")
+    } finally {
+      setDashboardLoading(false)
     }
   }
 
@@ -175,7 +193,7 @@ export default function FreelancersScreen() {
           return (
             <View key={f.id} style={[s.card, SHADOWS.cardSm]}>
               <TouchableOpacity
-                onPress={() => setSelectedFreelancer(f)}
+                onPress={() => { void openFreelancerDetails(f) }}
                 activeOpacity={0.7}
               >
                 <View style={s.cardRow1}>
@@ -245,6 +263,28 @@ export default function FreelancersScreen() {
                   <Text style={s.detailLabel}>Created</Text>
                   <Text style={s.detailValue}>{formatDate(selectedFreelancer.created_at)}</Text>
                 </View>
+
+                <View style={s.metricsSection}>
+                  <Text style={s.metricsTitle}>Performance Overview</Text>
+                  {dashboardLoading && (
+                    <View style={s.metricsLoading}>
+                      <ActivityIndicator size="small" color={COLORS.gradientStart} />
+                      <Text style={s.metricsLoadingText}>Loading freelancer metrics...</Text>
+                    </View>
+                  )}
+                  {dashboardError && !dashboardLoading && <Text style={s.metricsError}>{dashboardError}</Text>}
+                  {freelancerDashboard && !dashboardLoading && (
+                    <View style={s.metricsGrid}>
+                      <MetricCard label="Total Leads" value={freelancerDashboard.metrics.total_leads_submitted} color="#0f172a" />
+                      <MetricCard label="Active Leads" value={freelancerDashboard.metrics.active_leads} color="#2563eb" />
+                      <MetricCard label="Pending Processing" value={freelancerDashboard.metrics.pending_processing} color="#d97706" />
+                      <MetricCard label="Converted Sales" value={freelancerDashboard.metrics.converted_sales} color="#059669" />
+                      <MetricCard label="Pending Commissions" value={freelancerDashboard.metrics.pending_commissions} color="#d97706" />
+                      <MetricCard label="Paid Commissions" value={freelancerDashboard.metrics.paid_commissions} color="#059669" />
+                      <MetricCard label="Total Paid (KES)" value={freelancerDashboard.metrics.total_paid_kes} color="#059669" />
+                    </View>
+                  )}
+                </View>
               </>
             )}
 
@@ -257,6 +297,15 @@ export default function FreelancersScreen() {
           </ScrollView>
         </View>
       </Modal>
+    </View>
+  )
+}
+
+function MetricCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <View style={s.metricCard}>
+      <Text style={s.metricLabel}>{label}</Text>
+      <Text style={[s.metricValue, { color }]}>{(value ?? 0).toLocaleString()}</Text>
     </View>
   )
 }
@@ -383,6 +432,15 @@ const s = StyleSheet.create({
   },
   detailLabel: { fontSize: 10, color: "#94a3b8", textTransform: "uppercase", marginTop: 8 },
   detailValue: { fontSize: 14, fontWeight: "600", color: "#1e293b", marginTop: 2 },
+  metricsSection: { backgroundColor: "#f8fafc", borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#e2e8f0" },
+  metricsTitle: { fontSize: 13, fontWeight: "700", color: "#334155", marginBottom: 10 },
+  metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  metricCard: { width: "48%", minHeight: 66, backgroundColor: "#fff", borderRadius: 8, padding: 10, borderWidth: 1, borderColor: "#e2e8f0" },
+  metricLabel: { fontSize: 10, color: "#64748b", textTransform: "uppercase" },
+  metricValue: { fontSize: 20, fontWeight: "700", marginTop: 4 },
+  metricsLoading: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12 },
+  metricsLoadingText: { fontSize: 12, color: "#64748b" },
+  metricsError: { fontSize: 12, color: "#dc2626", paddingVertical: 8 },
   closeBtn: {
     backgroundColor: "#f1f5f9",
     paddingVertical: 10,
