@@ -1,8 +1,39 @@
 ﻿import api from './client'
 import * as SecureStore from 'expo-secure-store'
+import { Platform } from 'react-native'
 import { STORAGE_KEYS } from '../constants/config'
 import type { AuthResponse, UserRole, AuthUser } from '../types'
 import { clearStoredAuthenticatedRoute } from '../navigation/routeStorage'
+
+// expo-secure-store has no web implementation. Keep the same async API on web
+// so browser development and web builds can log in and out without calling the
+// missing native module methods.
+function webStorage(): Storage | null {
+  return typeof window !== 'undefined' ? window.localStorage : null
+}
+
+async function setAuthValue(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    webStorage()?.setItem(key, value)
+    return
+  }
+  await SecureStore.setItemAsync(key, value)
+}
+
+async function getAuthValue(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return webStorage()?.getItem(key) ?? null
+  }
+  return SecureStore.getItemAsync(key)
+}
+
+async function deleteAuthValue(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    webStorage()?.removeItem(key)
+    return
+  }
+  await SecureStore.deleteItemAsync(key)
+}
 
 export async function mobileLogin(
   email: string,
@@ -15,18 +46,18 @@ export async function mobileLogin(
 
   const { token, role, user } = response.data
 
-  await SecureStore.setItemAsync(STORAGE_KEYS.AUTH_TOKEN, token)
-  await SecureStore.setItemAsync(STORAGE_KEYS.USER_ROLE, role)
-  await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user))
+  await setAuthValue(STORAGE_KEYS.AUTH_TOKEN, token)
+  await setAuthValue(STORAGE_KEYS.USER_ROLE, role)
+  await setAuthValue(STORAGE_KEYS.USER_DATA, JSON.stringify(user))
 
   return { role, user }
 }
 
 export async function logout(): Promise<void> {
   await Promise.all([
-    SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN),
-    SecureStore.deleteItemAsync(STORAGE_KEYS.USER_ROLE),
-    SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA),
+    deleteAuthValue(STORAGE_KEYS.AUTH_TOKEN),
+    deleteAuthValue(STORAGE_KEYS.USER_ROLE),
+    deleteAuthValue(STORAGE_KEYS.USER_DATA),
     clearStoredAuthenticatedRoute(),
   ])
 }
@@ -36,9 +67,9 @@ export async function getStoredAuth(): Promise<{
   role: UserRole
   user: AuthUser
 } | null> {
-  const token = await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN)
-  const role = await SecureStore.getItemAsync(STORAGE_KEYS.USER_ROLE)
-  const userData = await SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA)
+  const token = await getAuthValue(STORAGE_KEYS.AUTH_TOKEN)
+  const role = await getAuthValue(STORAGE_KEYS.USER_ROLE)
+  const userData = await getAuthValue(STORAGE_KEYS.USER_DATA)
 
   if (!token || !role) return null
 
