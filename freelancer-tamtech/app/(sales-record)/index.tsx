@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native"
-import { Download, Pencil, Share2 } from "lucide-react-native"
+import { ArrowLeft, Download, Pencil, Share2 } from "lucide-react-native"
 import { router } from "expo-router"
 import { useAuthStore } from "../../src/store/authStore"
 import type { SalesRecordItem } from "../../src/api/salesRecord"
@@ -156,6 +156,12 @@ export default function SalesRecordHome() {
     }
   }, [filteredRows])
 
+  const closeHistory = useCallback(() => {
+    setHistoryOpen(false)
+    setSelectedRow(null)
+    setSearch("")
+  }, [])
+
   const openSaleDetails = useCallback(async (item: SaleRecordRow) => {
     setSelectedRow(item)
     try {
@@ -295,11 +301,22 @@ export default function SalesRecordHome() {
       </ScrollView>
 
       {/*  History Modal  */}
-      <Modal visible={historyOpen} animationType="slide">
+      <Modal visible={historyOpen} animationType="slide" onRequestClose={closeHistory}>
         <View style={s.modalScreen}>
           {/* Modal Header */}
           <View style={s.modalHeader}>
-            <Text style={s.modalTitle}>Sales Record History</Text>
+            <View style={s.modalTitleRow}>
+              <TouchableOpacity
+                onPress={closeHistory}
+                style={s.historyBackBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Go back from sales record history"
+              >
+                <ArrowLeft size={18} color="#334155" />
+                <Text style={s.historyBackText}>Back</Text>
+              </TouchableOpacity>
+              <Text style={s.modalTitle}>Sales Record History</Text>
+            </View>
             <View style={s.modalActions}>
               <TouchableOpacity onPress={handleDownloadCsv} style={[s.downloadBtn, (downloading || filteredRows.length === 0) && s.disabledBtn]} disabled={downloading || filteredRows.length === 0}>
                 {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
@@ -308,16 +325,6 @@ export default function SalesRecordHome() {
               <TouchableOpacity onPress={handleShareCsv} style={[s.shareBtn, (sharing || filteredRows.length === 0) && s.disabledBtn]} disabled={sharing || filteredRows.length === 0}>
                 {sharing ? <ActivityIndicator size="small" color="#fff" /> : <Share2 size={16} color="#fff" />}
                 <Text style={s.downloadText}>{sharing ? "Preparing" : "Share"}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setHistoryOpen(false)
-                  setSelectedRow(null)
-                  setSearch("")
-                }}
-                style={s.modalCloseBtn}
-              >
-                <Text style={s.modalCloseText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -611,25 +618,29 @@ const s = StyleSheet.create({
   // History Modal
   modalScreen: { flex: 1, backgroundColor: "#f8fafc" },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
     backgroundColor: "#fff",
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 14,
+    paddingBottom: 12,
   },
   modalTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a" },
-  modalActions: { flexDirection: "row", alignItems: "center", gap: 8 },
-  modalCloseBtn: {
+  modalTitleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  historyBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#cbd5e1",
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 8,
+    backgroundColor: "#f8fafc",
   },
-  modalCloseText: { fontSize: 12, fontWeight: "500", color: "#64748b" },
+  historyBackText: { fontSize: 13, fontWeight: "700", color: "#334155" },
+  modalActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   downloadBtn: { minWidth: 82, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#059669", paddingHorizontal: 12 },
   shareBtn: { minWidth: 76, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#2563eb", paddingHorizontal: 12 },
   downloadText: { color: "#fff", fontSize: 12, fontWeight: "700" },
