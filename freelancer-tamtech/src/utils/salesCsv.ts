@@ -59,9 +59,7 @@ const HEADERS = [
   "Chassis Number",
   "Finance Details",
   "Bike Color",
-  "Has Insurance",
   "Insurance Type",
-  "Has Tracker",
   "Tracker Duration",
   "Referral Name",
   "Deployment Name",
@@ -90,11 +88,6 @@ function displaySubmissionType(value: string): string {
 function displayPaymentType(value: string | null | undefined): string {
   if (!value) return ""
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
-function displayBoolean(value: boolean | null | undefined): string {
-  if (value === null || value === undefined) return ""
-  return value ? "Yes" : "No"
 }
 
 function displayDateOnly(value: string): string {
@@ -126,9 +119,7 @@ export function createSalesCsv(rows: SalesCsvRow[]): string {
     row.chassis_number,
     row.finance_details,
     row.bike_color,
-    displayBoolean(row.has_insurance),
     row.insurance_type,
-    displayBoolean(row.has_tracker),
     row.tracker_duration,
     row.referral_name,
     row.deployment_name,
