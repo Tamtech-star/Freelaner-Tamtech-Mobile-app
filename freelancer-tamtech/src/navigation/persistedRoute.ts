@@ -12,6 +12,25 @@ const TRANSIENT_ROUTES = new Set<string>([
   "/(sales-record)/form",
 ])
 
+// These are the screens that can recreate themselves from the authenticated
+// session alone. Nested/detail screens may depend on route params, modal state,
+// or data that was only held in memory when the process was killed.
+const RESTORABLE_ROUTES = new Set<string>([
+  "/(admin)",
+  "/(admin)/review",
+  "/(admin)/reports",
+  "/(admin)/freelancers",
+  "/(admin)/leads",
+  "/(admin)/sales-dashboard",
+  "/(admin)/sales-list",
+  "/(admin)/convertedsales",
+  "/(admin)/paymentrecords",
+  "/(admin)/users",
+  "/(sales-record)",
+  "/(freelancer)",
+  "/(freelancer)/showroom",
+])
+
 export function getDefaultAuthenticatedRoute(role: UserRole): AuthenticatedRoute {
   return (ROLE_PREFIXES[role] || "/login") as AuthenticatedRoute
 }
@@ -32,5 +51,6 @@ export function getRestorableAuthenticatedRoute(
   const fallback = getDefaultAuthenticatedRoute(role)
   if (!savedPathname || !isAuthenticatedRouteForRole(savedPathname, role)) return fallback
   if (TRANSIENT_ROUTES.has(savedPathname)) return fallback
+  if (!RESTORABLE_ROUTES.has(savedPathname)) return fallback
   return savedPathname as AuthenticatedRoute
 }

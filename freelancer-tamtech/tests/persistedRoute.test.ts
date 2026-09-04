@@ -38,9 +38,17 @@ test("restoration uses the saved route or falls back to role home", () => {
   assert.equal(getRestorableAuthenticatedRoute(null, "sales_agent"), "/(sales-record)")
 })
 
-test("transient parameter-dependent sales form falls back safely", () => {
+test("nested routes that require transient state fall back to the role home", () => {
   assert.equal(
     getRestorableAuthenticatedRoute("/(sales-record)/form", "sales_agent"),
     "/(sales-record)",
+  )
+  assert.equal(
+    getRestorableAuthenticatedRoute("/(admin)/sales-list?filter=direct", "admin"),
+    "/(admin)",
+  )
+  assert.equal(
+    getRestorableAuthenticatedRoute("/(freelancer)/showroom/know-your-bike", "freelancer"),
+    "/(freelancer)",
   )
 })

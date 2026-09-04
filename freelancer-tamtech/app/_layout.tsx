@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { router, Stack, useSegments } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { ActivityIndicator, View, StyleSheet } from "react-native"
@@ -22,6 +22,9 @@ export default function RootLayout() {
   const authenticatedPath = segments.length ? `/${segments.join("/")}` : "/"
   const [startupRoute, setStartupRoute] = useState<string | null>(null)
   const [navigationRestored, setNavigationRestored] = useState(false)
+  const restorationStarted = useRef(false)
+  const currentPathRef = useRef(authenticatedPath)
+  currentPathRef.current = authenticatedPath
 
   useEffect(() => {
     void (async () => {
@@ -49,8 +52,22 @@ export default function RootLayout() {
       setStartupRoute(null)
       return
     }
+    if (restorationStarted.current) return
+    restorationStarted.current = true
     router.replace(startupRoute as any)
-  }, [authenticatedPath, navigationRestored, startupRoute])
+    const targetRoute = startupRoute
+    const fallbackRoute = role && role !== "guest" ? getDefaultAuthenticatedRoute(role) : null
+    const fallbackTimer = setTimeout(() => {
+      if (fallbackRoute && currentPathRef.current !== targetRoute) {
+        router.replace(fallbackRoute as any)
+        void storeAuthenticatedRoute(fallbackRoute).catch(() => undefined)
+      }
+      setStartupRoute(null)
+    }, 1500)
+    // Do not keep replacing indefinitely if the target route cannot mount.
+    // Normal navigation and the role-home fallback must remain available.
+    return () => clearTimeout(fallbackTimer)
+  }, [authenticatedPath, navigationRestored, role, startupRoute])
 
   useEffect(() => {
     if (!navigationRestored || startupRoute || isLoading || !isAuthenticated || !role || role === "guest") return
