@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ClipboardList, Wallet, FileText, CheckCircle, Clock, CreditCard, XCircle, Check } from "lucide-react-native";
 import { useAuthStore } from "../../src/store/authStore";
 import { COLORS, SHADOWS } from "../../src/constants/config";
+import { useAppTheme } from "../../src/theme/theme";
 import {
   getFreelancerDashboard,
   getFreelancerDetails,
@@ -98,9 +99,10 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 // HELPERS
 
 function StatusBadge({ status }: { status: string }) {
+  const { colors } = useAppTheme();
   const c = STATUS_COLORS[status] || { bg: "#f1f5f9", text: "#475569" };
   return (
-    <View style={[badgeS.badge, { backgroundColor: c.bg }]}>
+    <View style={[badgeS.badge, { backgroundColor: colors.surface }, { backgroundColor: c.bg }]}>
       <Text style={[badgeS.text, { color: c.text }]}>
         {status.replace(/_/g, " ")}
       </Text>
@@ -121,9 +123,10 @@ function formatDate(d: string) {
 // METRIC CARD
 
 function MetricCard({ label, value, color, onPress }: { label: string; value: string | number; color: string; onPress?: () => void }) {
+  const { colors } = useAppTheme();
   return (
-    <TouchableOpacity onPress={onPress} disabled={!onPress} style={[mStyles.card, SHADOWS.cardSm]}>
-      <Text style={mStyles.label}>{label}</Text>
+    <TouchableOpacity onPress={onPress} disabled={!onPress} style={[mStyles.card, SHADOWS.cardSm, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Text style={[mStyles.label, { color: colors.muted }]}>{label}</Text>
       <Text style={[mStyles.value, { color }]}>{value}</Text>
       {onPress && <Text style={mStyles.hint}>View details →</Text>}
     </TouchableOpacity>
@@ -139,11 +142,12 @@ const mStyles = StyleSheet.create({
 // LEAD DETAIL CARD
 
 function DetailRow({ label, value, isStatus }: { label: string; value: string; isStatus?: boolean }) {
+  const { colors } = useAppTheme();
   return (
-    <View style={drS.row}>
-      <Text style={drS.label}>{label}</Text>
+    <View style={[drS.row, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+      <Text style={[drS.label, { color: colors.muted }]}>{label}</Text>
       <View style={{ marginTop: 2 }}>
-        {isStatus ? <StatusBadge status={value} /> : <Text style={drS.val}>{value}</Text>}
+        {isStatus ? <StatusBadge status={value} /> : <Text style={[drS.val, { color: colors.heading }]}>{value}</Text>}
       </View>
     </View>
   );
@@ -155,19 +159,20 @@ const drS = StyleSheet.create({
 });
 
 function LeadDetailCard({ lead, onBack, onProceedToPaymentAck }: { lead: LeadCardItem; onBack: () => void; onProceedToPaymentAck: (lead: LeadCardItem) => void }) {
+  const { colors } = useAppTheme();
   const effectiveStatus = lead.invoice_status || lead.lead_status;
   return (
-    <View style={[ldS.card, SHADOWS.cardSm]}>
+    <View style={[ldS.card, SHADOWS.cardSm, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <TouchableOpacity onPress={onBack} style={ldS.back}>
         <Text style={ldS.backText}>← Back to Leads List</Text>
       </TouchableOpacity>
       <View style={ldS.header}>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Text style={ldS.name}>{lead.customer_full_name}</Text>
+            <Text style={[ldS.name, { color: colors.heading }]}>{lead.customer_full_name}</Text>
             <StatusBadge status={effectiveStatus} />
           </View>
-          <Text style={ldS.code}>{lead.lead_code} · Created {lead.created_at ? formatDate(lead.created_at) : "—"}</Text>
+          <Text style={[ldS.code, { color: colors.muted }]}>{lead.lead_code} · Created {lead.created_at ? formatDate(lead.created_at) : "—"}</Text>
         </View>
       </View>
       <View style={ldS.grid}>
@@ -258,6 +263,7 @@ const ldS = StyleSheet.create({
 // MAIN COMPONENT
 
 export default function FreelancerDashboard() {
+  const { colors } = useAppTheme();
   const { user, logout } = useAuthStore()
   const sessionCode = user?.code || ""
   const [codeInput, setCodeInput] = useState(user?.code || "")
@@ -393,27 +399,27 @@ export default function FreelancerDashboard() {
   const payments = dashboard?.payments || [];
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: colors.bg }]}>
       <ScrollView 
-        style={s.scroll} 
+        style={[s.scroll, { backgroundColor: colors.bg }]}
         contentContainerStyle={{ paddingBottom:50 }}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(activeCode,true).finally(()=>setRefreshing(false)); }} tintColor={COLORS.gradientStart} />}
       >
         {/* Header */}
-        <View style={s.header}>
+        <View style={[s.header, { borderBottomColor: colors.border }]}>
           <View style={s.headerLeft}>
-            <Text style={s.headerTitle}>{freelancer?.full_name || "Dashboard"}</Text>
-            {freelancer?.display_code ? <View style={s.codeBadge}><Text style={s.codeBadgeText}>{freelancer.display_code}</Text></View> : null}
+            <Text style={[s.headerTitle, { color: colors.heading }]}>{freelancer?.full_name || "Dashboard"}</Text>
+            {freelancer?.display_code ? <View style={[s.codeBadge, { backgroundColor: colors.successSoft }]}><Text style={[s.codeBadgeText, { color: colors.success }]}>{freelancer.display_code}</Text></View> : null}
           </View>
-          <TouchableOpacity onPress={handleLogout} style={s.logoutBtn}><Text style={s.logoutText}>Logout</Text></TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={[s.logoutBtn, { borderColor: colors.border }]}><Text style={[s.logoutText, { color: colors.muted }]}>Logout</Text></TouchableOpacity>
         </View>
 
         {/* Tabs */}
         <View style={s.tabRow}>
-          <TouchableOpacity onPress={() => { setActiveTab("cards"); setLeadView("VIEW_SUMMARY"); }} style={[s.tabBtn, activeTab === "cards" && s.tabBtnActive]}>
-            <Text style={[s.tabBtnText, activeTab === "cards" && s.tabBtnTextActive]}>Freelancer Dashboard</Text>
+          <TouchableOpacity onPress={() => { setActiveTab("cards"); setLeadView("VIEW_SUMMARY"); }} style={[s.tabBtn, { backgroundColor: colors.card, borderColor: colors.border }, activeTab === "cards" && s.tabBtnActive]}>
+            <Text style={[s.tabBtnText, { color: colors.muted }, activeTab === "cards" && s.tabBtnTextActive]}>Freelancer Dashboard</Text>
           </TouchableOpacity>
           {activeTab !== "workflow" && (
             <TouchableOpacity onPress={() => { setActiveTab("workflow"); setWorkflowStage(1); }} style={s.tabNewBtn}>
@@ -426,7 +432,7 @@ export default function FreelancerDashboard() {
 
         {/* Code input */}
         <View style={s.codeRow}>
-          <TextInput style={s.codeInput} value={codeInput} onChangeText={setCodeInput} placeholder="Switch freelancer code" placeholderTextColor="#94a3b8" autoCapitalize="characters" />
+          <TextInput style={[s.codeInput, { color: colors.heading, backgroundColor: colors.input, borderColor: colors.border }]} value={codeInput} onChangeText={setCodeInput} placeholder="Switch freelancer code" placeholderTextColor={colors.placeholder} autoCapitalize="characters" />
           <TouchableOpacity onPress={handleReload} style={s.codeGo}><Text style={s.codeGoText}>Go</Text></TouchableOpacity>
         </View>
 
@@ -455,20 +461,20 @@ export default function FreelancerDashboard() {
                   <MetricCard label="Paid Commissions" value={metrics?.paid_commissions??0} color="#059669" onPress={() => loadDetailData(activeCode,"paid_commissions")} />
                   <MetricCard label="Total Paid (KES)" value={formatCurrency(metrics?.total_paid_kes??0)} color="#059669" />
                 </View>
-                <TouchableOpacity onPress={() => setShowPaymentHistory(!showPaymentHistory)} style={[s.paymentCard,SHADOWS.cardSm]}>
-                  <Text style={s.paymentCardLabel}>Payment History</Text>
+                <TouchableOpacity onPress={() => setShowPaymentHistory(!showPaymentHistory)} style={[s.paymentCard,SHADOWS.cardSm, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[s.paymentCardLabel, { color: colors.muted }]}>Payment History</Text>
                   <Text style={s.paymentCardValue}>{payments.length}</Text>
                   <Text style={s.paymentCardHint}>{showPaymentHistory ? "Hide ↑" : "View →"}</Text>
                 </TouchableOpacity>
                 {showPaymentHistory && (
-                  <View style={s.paymentSection}>
+                  <View style={[s.paymentSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={s.paymentSectionHeader}>
-                      <Text style={s.paymentSectionTitle}>Payment History</Text>
-                      <TouchableOpacity onPress={() => setShowPaymentHistory(false)}><Text style={s.hideText}>← Hide</Text></TouchableOpacity>
+                      <Text style={[s.paymentSectionTitle, { color: colors.heading }]}>Payment History</Text>
+                      <TouchableOpacity onPress={() => setShowPaymentHistory(false)}><Text style={[s.hideText, { color: colors.muted }]}>← Hide</Text></TouchableOpacity>
                     </View>
                     {payments.length===0 ? <Text style={s.emptyText}>No payments yet.</Text> : payments.map(p=>(
-                      <View key={p.payment_code} style={s.paymentRow}>
-                        <View style={{flex:1}}><Text style={s.paymentCode}>{p.payment_code}</Text><Text style={s.paymentMeta}>{p.payment_date||"—"} · {formatCurrency(p.amount_paid_kes)}</Text></View>
+                      <View key={p.payment_code} style={[s.paymentRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <View style={{flex:1}}><Text style={[s.paymentCode, { color: colors.heading }]}>{p.payment_code}</Text><Text style={[s.paymentMeta, { color: colors.muted }]}>{p.payment_date||"—"} · {formatCurrency(p.amount_paid_kes)}</Text></View>
                         <StatusBadge status="paid" />
                       </View>
                     ))}
@@ -479,22 +485,22 @@ export default function FreelancerDashboard() {
 
             {leadView === "VIEW_LEAD_LIST" && (
               <View style={s.leadsSection}>
-                <View style={s.leadsHeader}>
+                <View style={[s.leadsHeader, { borderBottomColor: colors.border }]}>
                   <TouchableOpacity onPress={handleBackToSummary} style={s.backBtn}><Text style={s.backBtnText}>← Back to Summary</Text></TouchableOpacity>
-                  <Text style={s.leadsTitle}>My Leads ({detailData?.leads.length??0})</Text>
+                  <Text style={[s.leadsTitle, { color: colors.heading }]}>My Leads ({detailData?.leads.length??0})</Text>
                 </View>
                 {detailLoading && !detailData && <ActivityIndicator color={COLORS.gradientStart} style={{marginVertical:20}} />}
                 {detailData && detailData.leads.length===0 && <Text style={s.emptyText}>No leads found in this category.</Text>}
                 {detailData && detailData.leads.map(lead=>(
-                  <TouchableOpacity key={lead.id} onPress={()=>handleLeadRowClick(lead)} style={[s.leadCard,SHADOWS.cardSm]}>
+                  <TouchableOpacity key={lead.id} onPress={()=>handleLeadRowClick(lead)} style={[s.leadCard,SHADOWS.cardSm, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={s.leadCardTop}>
-                      <View style={{flex:1}}><Text style={s.leadCardName}>{lead.customer_full_name}</Text><Text style={s.leadCode}>{lead.lead_code}</Text></View>
+                      <View style={{flex:1}}><Text style={[s.leadCardName, { color: colors.heading }]}>{lead.customer_full_name}</Text><Text style={[s.leadCode, { color: colors.muted }]}>{lead.lead_code}</Text></View>
                       <StatusBadge status={lead.invoice_status||lead.lead_status} />
                     </View>
                     <View style={s.leadCardMeta}>
-                      <Text style={[s.leadCardMetaText,{fontWeight:"600",color:"#334155"}]}>{lead.payment_type==="cash"?"Cash":"Loan"}</Text>
-                      <Text style={s.leadCardMetaText}>Qty: {lead.quantity_purchased??lead.quantity_interested}</Text>
-                      {(lead.location||lead.county) ? <Text style={s.leadCardMetaText} numberOfLines={1}>{lead.location}{lead.county?`, ${lead.county}`:""}</Text> : null}
+                      <Text style={[s.leadCardMetaText,{fontWeight:"600",color:colors.body}]}>{lead.payment_type==="cash"?"Cash":"Loan"}</Text>
+                      <Text style={[s.leadCardMetaText, { color: colors.muted }]}>Qty: {lead.quantity_purchased??lead.quantity_interested}</Text>
+                      {(lead.location||lead.county) ? <Text style={[s.leadCardMetaText, { color: colors.muted }]} numberOfLines={1}>{lead.location}{lead.county?`, ${lead.county}`:""}</Text> : null}
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -533,9 +539,9 @@ export default function FreelancerDashboard() {
 
             {/* STAGE 1: LEAD CREATION */}
             {workflowStage===1 && (
-              <View style={s.stageCard}>
-                <Text style={s.stageTitle}>Step 1: Lead Creation</Text>
-                <Text style={s.stageDesc}>Submit a new customer lead.</Text>
+              <View style={[s.stageCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[s.stageTitle, { color: colors.heading }]}>Step 1: Lead Creation</Text>
+                <Text style={[s.stageDesc, { color: colors.muted }]}>Submit a new customer lead.</Text>
                 <View style={s.formGrid}>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer Full Name *</Text><TextInput style={s.input} value={leadForm.customerFullName} onChangeText={v=>setLeadForm(p=>({...p,customerFullName:v}))} placeholder="Customer Full Name *" placeholderTextColor="#94a3b8" /></View>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer ID Number / KRA PIN *</Text><TextInput style={s.input} value={leadForm.customerIdNumber} onChangeText={v=>setLeadForm(p=>({...p,customerIdNumber:v}))} placeholder="Customer ID Number / KRA PIN *" placeholderTextColor="#94a3b8" /></View>
@@ -595,12 +601,12 @@ export default function FreelancerDashboard() {
 
             {/* STAGE 2: PAYMENT ACKNOWLEDGEMENT (Formerly Stage 4) */}
             {workflowStage===2 && (
-              <View style={s.stageCard}>
+              <View style={[s.stageCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 {paymentDone ? (
                   <View style={s.successScreen}>
                     <View style={s.successCircle}><CheckCircle size={32} color="#059669" /></View>
-                    <Text style={s.successTitle}>Payment Acknowledged Successfully</Text>
-                    <Text style={s.successDesc}>Your payment has been acknowledged. Download your receipt below.</Text>
+                    <Text style={[s.successTitle, { color: colors.heading }]}>Payment Acknowledged Successfully</Text>
+                    <Text style={[s.successDesc, { color: colors.body }]}>Your payment has been acknowledged. Download your receipt below.</Text>
                     {paymentSubCode && <TouchableOpacity onPress={handleDownloadReceipt} style={[s.receiptBtn,{marginTop:16}]}><Text style={s.receiptBtnText}>Download Receipt PDF ({paymentSubCode})</Text></TouchableOpacity>}
                     <TouchableOpacity onPress={()=>{setPaymentDone(false);setActiveTab("cards");setLeadView("VIEW_SUMMARY");}} style={[s.submitBtn,{marginTop:12}]}><Text style={s.submitBtnText}>Go to Dashboard →</Text></TouchableOpacity>
                   </View>
