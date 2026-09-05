@@ -162,6 +162,10 @@ export default function SalesRecordHome() {
     setSearch("")
   }, [])
 
+  const closeSaleDetails = useCallback(() => {
+    setSelectedRow(null)
+  }, [])
+
   const openSaleDetails = useCallback(async (item: SaleRecordRow) => {
     setSelectedRow(item)
     try {
@@ -410,12 +414,28 @@ export default function SalesRecordHome() {
       </Modal>
 
       {/*  Detail Modal  */}
-      <Modal visible={!!selectedRow} animationType="fade" transparent>
+      <Modal
+        visible={!!selectedRow}
+        animationType="fade"
+        transparent
+        onRequestClose={closeSaleDetails}
+      >
         <View style={s.detailOverlay}>
           <View style={s.detailCard}>
             {selectedRow && (
               <>
-                <Text style={s.detailTitle}>{selectedRow.conversion_code}</Text>
+                <View style={s.detailHeader}>
+                  <TouchableOpacity
+                    onPress={closeSaleDetails}
+                    style={s.detailBackBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Go back from sale details"
+                  >
+                    <ArrowLeft size={18} color="#334155" />
+                    <Text style={s.detailBackText}>Back</Text>
+                  </TouchableOpacity>
+                  <Text style={s.detailTitle}>{selectedRow.conversion_code}</Text>
+                </View>
 
                 <View style={s.detailBody}>
                   <DetailRow label="Type" value={selectedRow.submission_type === "direct_sale" ? "Direct Sale" : "Freelancer Lead"} />
@@ -712,6 +732,9 @@ const s = StyleSheet.create({
     elevation: 10,
   },
   detailTitle: { fontSize: 20, fontWeight: "700", color: "#0f172a", marginBottom: 16 },
+  detailHeader: { marginBottom: 4 },
+  detailBackBtn: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderColor: "#cbd5e1", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: "#f8fafc", marginBottom: 14 },
+  detailBackText: { fontSize: 13, fontWeight: "700", color: "#334155" },
   detailBody: { backgroundColor: "#f8fafc", borderRadius: 12, padding: 16, marginBottom: 16 },
   detailRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   detailLabel: { fontSize: 14, fontWeight: "700", color: "#0f172a" },
