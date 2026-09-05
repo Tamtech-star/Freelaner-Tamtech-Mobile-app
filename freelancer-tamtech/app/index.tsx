@@ -126,7 +126,7 @@ export default function Index() {
                 <Text style={styles.footerLine}>Email: tamtechtools@gmail.com</Text>
               </View>
               <Text style={styles.footerLine}>Web: Tamtech.co.ke</Text>
-              <Text style={styles.developer}>Developer: IMBEKA MUSA</Text>
+              <Text style={styles.developer}>Developer: TAMTECH</Text>
             </View>
           </Animated.View>
         </ScrollView>

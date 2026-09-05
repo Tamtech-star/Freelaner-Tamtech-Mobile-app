@@ -15,6 +15,7 @@ import {
   getStoredAuthenticatedRoute,
   storeAuthenticatedRoute,
 } from "../src/navigation/routeStorage"
+import { ThemeProvider } from "../src/theme/theme"
 
 export default function RootLayout() {
   const { isLoading, isAuthenticated, role, restoreSession } = useAuthStore()
@@ -92,7 +93,8 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <ThemeProvider>
+      <>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
@@ -105,8 +107,9 @@ export default function RootLayout() {
         ) : null}
         <Stack.Screen name="(public)" options={{ presentation: "modal" }} />
       </Stack>
-      <StatusBar style="dark" />
-    </>
+        <StatusBar style="auto" />
+      </>
+    </ThemeProvider>
   )
 }
 

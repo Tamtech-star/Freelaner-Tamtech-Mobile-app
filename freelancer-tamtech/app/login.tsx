@@ -16,8 +16,10 @@ import { LinearGradient } from "expo-linear-gradient"
 import { Eye, EyeOff } from "lucide-react-native"
 import { useAuthStore } from "../src/store/authStore"
 import { COLORS, SHADOWS } from "../src/constants/config"
+import { useAppTheme } from "../src/theme/theme"
 
 export default function LoginScreen() {
+  const { colors } = useAppTheme()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -66,7 +68,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -80,16 +82,16 @@ export default function LoginScreen() {
         </View>
 
         {/* Login Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Welcome Back</Text>
-          <Text style={styles.cardSubtitle}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.cardTitle, { color: colors.heading }]}>Welcome Back</Text>
+          <Text style={[styles.cardSubtitle, { color: colors.muted }]}>
             Enter your credentials to continue
           </Text>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.heading, backgroundColor: colors.input, borderColor: colors.border }]}
               placeholder="Enter your email"
               placeholderTextColor={COLORS.placeholder}
               value={email}
@@ -102,9 +104,9 @@ export default function LoginScreen() {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordInputWrap}>
+            <View style={[styles.passwordInputWrap, { backgroundColor: colors.input, borderColor: colors.border }]}>
               <TextInput
-                style={styles.passwordInput}
+                style={[styles.passwordInput, { color: colors.heading }]}
                 placeholder="Enter your password"
                 placeholderTextColor={COLORS.placeholder}
                 value={password}
