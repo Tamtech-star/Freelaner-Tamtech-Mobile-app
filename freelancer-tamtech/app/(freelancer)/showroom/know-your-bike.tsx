@@ -13,7 +13,7 @@ import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
 import { router, useFocusEffect } from "expo-router"
 import { ChevronLeft, ChevronRight, Volume2, VolumeX, X } from "lucide-react-native"
-import { useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
+import { getShowroomAudioEnabled, useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
 import Animated, {
   Easing,
   FadeIn,
@@ -127,6 +127,8 @@ export default function KnowYourBikeScreen() {
   }, [])
 
   const startAmbientSound = useCallback(async () => {
+    await getShowroomAudioEnabled()
+    if (!audioEnabledRef.current) return
     await stopAmbientSound()
     const requestId = ambientRequestRef.current + 1
     ambientRequestRef.current = requestId
@@ -143,7 +145,7 @@ export default function KnowYourBikeScreen() {
     } catch {
       // Keep the studio usable if ambient playback is unavailable.
     }
-  }, [stopAmbientSound])
+  }, [audioEnabledRef])
 
   const pauseAmbientSound = useCallback(async () => {
     await ambientStartRef.current

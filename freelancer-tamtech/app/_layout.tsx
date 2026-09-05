@@ -87,7 +87,7 @@ export default function RootLayout() {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={COLORS.gradientStart} />
-        <StatusBar style="dark" />
+        <StatusBar style="auto" />
       </View>
     )
   }

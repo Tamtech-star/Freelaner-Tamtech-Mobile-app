@@ -12,7 +12,7 @@ import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
 import { router, useFocusEffect } from "expo-router"
 import { Bike, ChevronLeft, ChevronRight, Landmark, Volume2, VolumeX } from "lucide-react-native"
-import { useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
+import { getShowroomAudioEnabled, useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
 import Animated, {
   Easing,
   interpolate,
@@ -135,6 +135,8 @@ export default function ShowroomHub() {
   }, [])
 
   const startAmbient = useCallback(async () => {
+    await getShowroomAudioEnabled()
+    if (!audioEnabledRef.current) return
     const existingSound = ambientSoundRef.current
     if (existingSound) {
       try {
@@ -159,7 +161,7 @@ export default function ShowroomHub() {
     } catch {
       // Keep the showroom usable if audio playback is unavailable.
     }
-  }, [])
+  }, [audioEnabledRef])
 
   const pauseAmbient = useCallback(async () => {
     await ambientStartRef.current

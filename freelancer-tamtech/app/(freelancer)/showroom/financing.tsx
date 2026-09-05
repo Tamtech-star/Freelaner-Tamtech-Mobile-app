@@ -15,7 +15,7 @@ import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
 import { router } from "expo-router"
 import { ChevronDown, ChevronLeft, Check, Percent, Volume2, VolumeX, WalletCards, X } from "lucide-react-native"
-import { useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
+import { getShowroomAudioEnabled, useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
 import Animated, {
   Easing,
   FadeIn,
@@ -197,6 +197,7 @@ export default function FinancingScreen() {
   }, [stopSound])
 
   const playClick = useCallback(async () => {
+    await getShowroomAudioEnabled()
     if (!audioEnabledRef.current) return
     await stopSound(clickSoundRef)
     try {
@@ -217,6 +218,7 @@ export default function FinancingScreen() {
   }, [stopSound])
 
   const playNarration = useCallback(async (token: number, option: FinancingOption) => {
+    await getShowroomAudioEnabled()
     if (!audioEnabledRef.current) return
     if (token !== animationTokenRef.current) return
     await stopSound(narrationSoundRef)

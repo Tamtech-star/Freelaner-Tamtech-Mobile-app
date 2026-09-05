@@ -5,17 +5,17 @@ const STORAGE_KEY = "showroom_audio_enabled"
 
 let cachedAudioEnabled = true
 let audioPreferencePromise: Promise<boolean> | null = null
+let preferenceVersion = 0
 
 function loadAudioPreference(): Promise<boolean> {
   if (!audioPreferencePromise) {
+    const versionAtStart = preferenceVersion
     audioPreferencePromise = AsyncStorage.getItem(STORAGE_KEY)
       .then((value) => {
-        cachedAudioEnabled = value !== "false"
-        audioPreferenceReady = true
+        if (versionAtStart === preferenceVersion) cachedAudioEnabled = value !== "false"
         return cachedAudioEnabled
       })
       .catch(() => {
-        audioPreferenceReady = true
         return cachedAudioEnabled
       })
   }
@@ -27,9 +27,12 @@ export async function getShowroomAudioEnabled(): Promise<boolean> {
 }
 
 export async function setShowroomAudioEnabled(enabled: boolean): Promise<void> {
+  preferenceVersion += 1
+  const version = preferenceVersion
   cachedAudioEnabled = enabled
-  audioPreferenceReady = true
+  audioPreferencePromise = Promise.resolve(enabled)
   await AsyncStorage.setItem(STORAGE_KEY, String(enabled))
+  if (version !== preferenceVersion) return
 }
 
 export function isShowroomAudioEnabled(): boolean {
