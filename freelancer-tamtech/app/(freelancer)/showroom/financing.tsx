@@ -14,7 +14,8 @@ import {
 import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
 import { router } from "expo-router"
-import { ChevronDown, ChevronLeft, Check, Percent, WalletCards, X } from "lucide-react-native"
+import { ChevronDown, ChevronLeft, Check, Percent, Volume2, VolumeX, WalletCards, X } from "lucide-react-native"
+import { useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
 import Animated, {
   Easing,
   FadeIn,
@@ -162,6 +163,7 @@ function FinancingCard({
 }
 
 export default function FinancingScreen() {
+  const { audioEnabled, audioEnabledRef, setAudioPreference } = useShowroomAudioPreference()
   const [expanded, setExpanded] = useState<FinancingId | null>(null)
   const [guideVisible, setGuideVisible] = useState(false)
   const [guideOption, setGuideOption] = useState<FinancingOption | null>(null)
@@ -195,6 +197,7 @@ export default function FinancingScreen() {
   }, [stopSound])
 
   const playClick = useCallback(async () => {
+    if (!audioEnabledRef.current) return
     await stopSound(clickSoundRef)
     try {
       const { sound } = await Audio.Sound.createAsync(
@@ -214,6 +217,7 @@ export default function FinancingScreen() {
   }, [stopSound])
 
   const playNarration = useCallback(async (token: number, option: FinancingOption) => {
+    if (!audioEnabledRef.current) return
     if (token !== animationTokenRef.current) return
     await stopSound(narrationSoundRef)
     if (token !== animationTokenRef.current) return
@@ -310,6 +314,16 @@ export default function FinancingScreen() {
     openOption(option)
   }, [closeGuide, expanded, openOption])
 
+  const toggleAudio = useCallback(() => {
+    const enabled = !audioEnabledRef.current
+    void setAudioPreference(enabled)
+    if (!enabled) void stopGuideAudio()
+  }, [audioEnabledRef, setAudioPreference, stopGuideAudio])
+
+  useEffect(() => {
+    if (!audioEnabled) void stopGuideAudio()
+  }, [audioEnabled, stopGuideAudio])
+
   useEffect(() => () => {
     animationTokenRef.current += 1
     void stopGuideAudio()
@@ -325,6 +339,9 @@ export default function FinancingScreen() {
             </Pressable>
             <Text style={styles.topBarLabel}>HOW TO PURCHASE</Text>
             <View style={styles.topBarRule} />
+            <Pressable accessibilityRole="button" accessibilityLabel={audioEnabled ? "Mute showroom audio" : "Unmute showroom audio"} onPress={toggleAudio} style={styles.audioButton}>
+              {audioEnabled ? <Volume2 size={18} color="#FFFFFF" /> : <VolumeX size={18} color="#8D9298" />}
+            </Pressable>
           </View>
 
           <View style={styles.hero}>
@@ -389,6 +406,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 48 },
   topBar: { flexDirection: "row", alignItems: "center", gap: 13 },
   backButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#292929", backgroundColor: "#090909" },
+  audioButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#292929", backgroundColor: "#090909" },
   topBarLabel: { color: "#A7ADB0", fontSize: 10, fontWeight: "900", letterSpacing: 1.8 },
   topBarRule: { height: 1, flex: 1, backgroundColor: "#222526" },
   hero: { paddingTop: 54, paddingBottom: 34 },

@@ -12,7 +12,8 @@ import {
 import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
 import { router, useFocusEffect } from "expo-router"
-import { ChevronLeft, ChevronRight, X } from "lucide-react-native"
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, X } from "lucide-react-native"
+import { useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
 import Animated, {
   Easing,
   FadeIn,
@@ -74,6 +75,7 @@ function Hotspot({
 }
 
 export default function KnowYourBikeScreen() {
+  const { audioEnabled, audioEnabledRef, setAudioPreference } = useShowroomAudioPreference()
   const [selectedHotspot, setSelectedHotspot] = useState<BikeHotspot | null>(null)
   const [selectedColorId, setSelectedColorId] = useState("blue")
   const [galleryIndex, setGalleryIndex] = useState(0)
@@ -131,7 +133,7 @@ export default function KnowYourBikeScreen() {
     try {
       const { sound } = await Audio.Sound.createAsync(
         require("../../../assets/sounds/bike-studio-ambient.mp3"),
-        { shouldPlay: true, isLooping: true, volume: 0.3 },
+        { shouldPlay: audioEnabledRef.current, isLooping: true, volume: 0.3 },
       )
       if (ambientRequestRef.current !== requestId) {
         await sound.unloadAsync()
@@ -155,6 +157,7 @@ export default function KnowYourBikeScreen() {
   }, [])
 
   const resumeAmbientSound = useCallback(async () => {
+    if (!audioEnabledRef.current) return
     await ambientStartRef.current
     const sound = ambientSoundRef.current
     if (!sound) return
@@ -183,6 +186,7 @@ export default function KnowYourBikeScreen() {
   }, [])
 
   const playHotspotSound = useCallback(async (hotspot: BikeHotspot) => {
+    if (!audioEnabledRef.current) return
     await pauseAmbientSound()
     await stopHotspotSound()
     const requestId = soundRequestRef.current + 1
@@ -250,6 +254,20 @@ export default function KnowYourBikeScreen() {
     router.back()
   }, [stopAmbientSound, stopHotspotSound])
 
+  const toggleAudio = useCallback(() => {
+    const enabled = !audioEnabledRef.current
+    void setAudioPreference(enabled)
+    if (enabled) void startAmbientSound()
+    else void pauseAmbientSound()
+  }, [audioEnabledRef, pauseAmbientSound, setAudioPreference, startAmbientSound])
+
+  useEffect(() => {
+    if (!audioEnabled) {
+      void pauseAmbientSound()
+      void stopHotspotSound()
+    }
+  }, [audioEnabled, pauseAmbientSound, stopHotspotSound])
+
   const selectColor = (colorId: string) => {
     const color = model.colors.find((item) => item.id === colorId)
     if (!color?.available || color.images.length === 0) return
@@ -273,6 +291,9 @@ export default function KnowYourBikeScreen() {
             <Text style={styles.headerEyebrow}>KNOW YOUR BIKE</Text>
             <Text style={styles.headerTitle}>Studio view</Text>
           </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={audioEnabled ? "Mute showroom music" : "Unmute showroom music"} onPress={toggleAudio} style={styles.audioButton}>
+            {audioEnabled ? <Volume2 size={18} color="#FFFFFF" /> : <VolumeX size={18} color="#8D9298" />}
+          </Pressable>
           <Text style={styles.headerModel}>01 MODEL</Text>
         </View>
 
@@ -389,6 +410,7 @@ const styles = StyleSheet.create({
   headerEyebrow: { color: "#37E6FF", fontSize: 9, fontWeight: "900", letterSpacing: 1.7 },
   headerTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", marginTop: 3 },
   headerModel: { color: "#5E6468", fontSize: 10, fontWeight: "900", letterSpacing: 1.1 },
+  audioButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#292929", backgroundColor: "#090909", marginRight: 10 },
   scroll: { flex: 1 },
   scrollContent: { alignItems: "center", paddingTop: 16, paddingBottom: 40 },
   stage: { borderWidth: 1, borderColor: "#20282A", backgroundColor: "#020303", overflow: "hidden" },

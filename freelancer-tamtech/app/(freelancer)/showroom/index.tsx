@@ -11,7 +11,8 @@ import {
 import { Audio } from "expo-av"
 import { LinearGradient } from "expo-linear-gradient"
 import { router, useFocusEffect } from "expo-router"
-import { Bike, ChevronLeft, ChevronRight, Landmark } from "lucide-react-native"
+import { Bike, ChevronLeft, ChevronRight, Landmark, Volume2, VolumeX } from "lucide-react-native"
+import { useShowroomAudioPreference } from "../../../src/showroom/audioPreference"
 import Animated, {
   Easing,
   interpolate,
@@ -111,6 +112,7 @@ function ShowroomCard({
 }
 
 export default function ShowroomHub() {
+  const { audioEnabled, audioEnabledRef, setAudioPreference } = useShowroomAudioPreference()
   const ambientSoundRef = useRef<Audio.Sound | null>(null)
   const ambientStartRef = useRef<Promise<void> | null>(null)
   const ambientRequestRef = useRef(0)
@@ -147,7 +149,7 @@ export default function ShowroomHub() {
     try {
       const { sound } = await Audio.Sound.createAsync(
         require("../../../assets/sounds/showroom-ambient.mp3"),
-        { shouldPlay: true, isLooping: true, volume: 0.35 },
+        { shouldPlay: audioEnabledRef.current, isLooping: true, volume: 0.35 },
       )
       if (ambientRequestRef.current !== requestId) {
         await sound.unloadAsync()
@@ -192,6 +194,17 @@ export default function ShowroomHub() {
     router.push(route)
   }, [pauseAmbient])
 
+  const toggleAudio = useCallback(() => {
+    const enabled = !audioEnabledRef.current
+    void setAudioPreference(enabled)
+    if (enabled) void startAmbient()
+    else void pauseAmbient()
+  }, [audioEnabledRef, pauseAmbient, setAudioPreference, startAmbient])
+
+  useEffect(() => {
+    if (!audioEnabled) void pauseAmbient()
+  }, [audioEnabled, pauseAmbient])
+
   const leaveShowroom = useCallback(async () => {
     await stopAmbient()
     router.back()
@@ -220,6 +233,10 @@ export default function ShowroomHub() {
               Get closer to the machine, then find the ownership path built around you.
             </Text>
           </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={audioEnabled ? "Mute showroom music" : "Unmute showroom music"} onPress={toggleAudio} style={styles.audioButton}>
+            {audioEnabled ? <Volume2 size={19} color="#FFFFFF" /> : <VolumeX size={19} color="#8D9298" />}
+            <Text style={styles.audioButtonText}>{audioEnabled ? "Music on" : "Muted"}</Text>
+          </Pressable>
         </View>
 
         <View style={styles.cards}>
@@ -251,6 +268,8 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   headerCopy: { maxWidth: 560 },
+  audioButton: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "#282828", backgroundColor: "#0A0A0A", paddingHorizontal: 10, paddingVertical: 9, marginLeft: 10 },
+  audioButtonText: { color: "#A3A7AC", fontSize: 10, fontWeight: "800" },
   kicker: { color: "#37E6FF", fontSize: 11, fontWeight: "800", letterSpacing: 1.8, marginBottom: 12 },
   title: { color: "#FFFFFF", fontSize: 38, lineHeight: 43, fontWeight: "800", letterSpacing: 0 },
   subtitle: { color: "#8D9298", fontSize: 15, lineHeight: 23, marginTop: 12, maxWidth: 500 },
