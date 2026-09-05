@@ -152,7 +152,7 @@ function FinancingCard({
               </View>
             ))}
             <View style={[styles.applyBox, { borderColor: `${option.accent}55` }]}>
-              <Text style={styles.applyText}>Speak to our team to confirm your personalised rate.</Text>
+              <Text style={styles.applyText}>Speak to our team to confirm your personalised rate.Call 0118 673 848 or whatsaap</Text>
             </View>
           </View>
         ) : null}
