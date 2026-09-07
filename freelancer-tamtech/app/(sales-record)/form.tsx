@@ -521,10 +521,10 @@ export default function SalesRecordForm() {
     <View style={s.container}>
       {/* Header */}
       <View style={s.header}>
+        <Text style={s.headerTitle}>{isEditing ? "Edit Sale Record" : "Sales Record"}</Text>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={s.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>{isEditing ? "Edit Sale Record" : "Sales Record"}</Text>
       </View>
 
       <ScrollView
@@ -1062,9 +1062,7 @@ export default function SalesRecordForm() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
