@@ -9,12 +9,15 @@ import {
   ActivityIndicator,
   StyleSheet,
   Linking,
+  StatusBar,
 } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import * as ImagePicker from "expo-image-picker"
 import { Directory, File, Paths } from "expo-file-system"
 import DropDownPicker from "react-native-dropdown-picker"
 import { useAuthStore } from "../../src/store/authStore"
+import { ArrowLeft } from "lucide-react-native"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { insertPendingSalesRecord } from "../../src/offline/database"
 import { buildPendingSalesRecord } from "../../src/offline/syncCore"
@@ -109,6 +112,7 @@ const DOCUMENT_FIELDS = [
 
 //  Component 
 export default function SalesRecordForm() {
+  const insets = useSafeAreaInsets()
   const { user } = useAuthStore()
   const params = useLocalSearchParams<{
     editId?: string
@@ -519,17 +523,18 @@ export default function SalesRecordForm() {
 
   return (
     <View style={s.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       {/* Header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>{isEditing ? "Edit Sale Record" : "Sales Record"}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Text style={s.backText}>← Back</Text>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
+          <ArrowLeft size={24} color="#0f172a" />
         </TouchableOpacity>
+        <Text style={s.headerTitle}>{isEditing ? "Edit Sale Record" : "Sales Record"}</Text>
       </View>
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
       >
@@ -1062,15 +1067,15 @@ export default function SalesRecordForm() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
-    gap: 10,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
     backgroundColor: "#fff",
   },
-  backBtn: { padding: 4 },
-  backText: { fontSize: 16, fontWeight: "600", color: COLORS.gradientStart },
+  backBtn: { padding: 4, marginRight: 12 },
   headerTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a" },
 
   scroll: { flex: 1, paddingHorizontal: 16 },

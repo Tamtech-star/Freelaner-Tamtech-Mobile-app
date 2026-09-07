@@ -12,9 +12,11 @@ import {
   Linking,
   StyleSheet,
   Alert,
+  StatusBar,
 } from "react-native"
 import { ArrowLeft, Download, Pencil, Share2 } from "lucide-react-native"
 import { router } from "expo-router"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useAuthStore } from "../../src/store/authStore"
 import type { SalesRecordItem } from "../../src/api/salesRecord"
 import api from "../../src/api/client"
@@ -47,6 +49,7 @@ const DOCUMENT_LABELS: Record<string, string> = {
 }
 
 export default function SalesRecordHome() {
+  const insets = useSafeAreaInsets()
   const { user, logout } = useAuthStore()
   const [rows, setRows] = useState<SaleRecordRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -192,6 +195,7 @@ export default function SalesRecordHome() {
 
   return (
     <View style={s.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       {/* Brand Bar */}
       <View style={s.brandBar}>
         <Text style={s.brandText}></Text>
@@ -306,29 +310,10 @@ export default function SalesRecordHome() {
 
       {/*  History Modal  */}
       <Modal visible={historyOpen} animationType="slide" onRequestClose={closeHistory}>
-        <View style={s.modalScreen}>
+        <View style={[s.modalScreen, { paddingTop: insets.top }]}>
           {/* Modal Header */}
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Sales Record History</Text>
-            <View style={s.modalActions}>
-              <TouchableOpacity onPress={handleDownloadCsv} style={[s.downloadBtn, (downloading || filteredRows.length === 0) && s.disabledBtn]} disabled={downloading || filteredRows.length === 0}>
-                {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
-                <Text style={s.downloadText}>{downloading ? "Saving" : "Download"}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleShareCsv} style={[s.shareBtn, (sharing || filteredRows.length === 0) && s.disabledBtn]} disabled={sharing || filteredRows.length === 0}>
-                {sharing ? <ActivityIndicator size="small" color="#fff" /> : <Share2 size={16} color="#fff" />}
-                <Text style={s.downloadText}>{sharing ? "Preparing" : "Share"}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={closeHistory}
-                style={s.historyBackBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Go back from sales record history"
-              >
-                <ArrowLeft size={18} color="#334155" />
-                <Text style={s.historyBackText}>Back</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Search */}
@@ -351,6 +336,21 @@ export default function SalesRecordHome() {
             <SalesDateFilterControl value={dateFilter} onChange={setDateFilter} availableDates={rows.map((row) => row.sale_date)} />
           </View>
 
+          <View style={s.secondaryActions}>
+            <TouchableOpacity onPress={handleDownloadCsv} style={[s.downloadBtn, (downloading || filteredRows.length === 0) && s.disabledBtn]} disabled={downloading || filteredRows.length === 0}>
+              {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
+              <Text style={s.downloadText}>{downloading ? "Saving" : "Download"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleShareCsv} style={[s.shareBtn, (sharing || filteredRows.length === 0) && s.disabledBtn]} disabled={sharing || filteredRows.length === 0}>
+              {sharing ? <ActivityIndicator size="small" color="#fff" /> : <Share2 size={16} color="#fff" />}
+              <Text style={s.downloadText}>{sharing ? "Preparing" : "Share"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={closeHistory} style={s.historyBackBtn} accessibilityRole="button" accessibilityLabel="Go back from sales record history">
+              <ArrowLeft size={18} color="#334155" />
+              <Text style={s.historyBackText}>Back</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* List */}
           {filteredRows.length === 0 ? (
             <View style={s.emptyWrap}>
@@ -362,7 +362,7 @@ export default function SalesRecordHome() {
             <FlatList
               data={filteredRows}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 24 }}
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -636,10 +636,6 @@ const s = StyleSheet.create({
   // History Modal
   modalScreen: { flex: 1, backgroundColor: "#f8fafc" },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#e2e8f0",
     backgroundColor: "#fff",
@@ -660,7 +656,7 @@ const s = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   historyBackText: { fontSize: 13, fontWeight: "700", color: "#334155" },
-  modalActions: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 },
+  secondaryActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingBottom: 10 },
   downloadBtn: { minWidth: 82, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#059669", paddingHorizontal: 12 },
   shareBtn: { minWidth: 76, height: 34, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 8, backgroundColor: "#2563eb", paddingHorizontal: 12 },
   downloadText: { color: "#fff", fontSize: 12, fontWeight: "700" },
