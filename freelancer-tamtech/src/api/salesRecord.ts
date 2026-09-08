@@ -11,6 +11,7 @@ export interface SalesRecordItem {
   freight: string
   sales_agent_name: string
   sales_invoice_number: string
+  branch?: string | null
   bike_model_sold: string
   sale_date: string
   quantity: number

@@ -511,6 +511,7 @@ export default function SalesRecordHome() {
                         referralName: selectedRow.referral_name || "",
                         deploymentName: selectedRow.deployment_name || "",
                         invoiceNumber: selectedRow.sales_invoice_number,
+                        branch: selectedRow.branch || "",
                         saleDate: selectedRow.sale_date,
                         quantity: String(selectedRow.quantity),
                         invoicePhotoUrl: selectedRow.invoice_photo_url || "",

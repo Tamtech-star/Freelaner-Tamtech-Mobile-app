@@ -39,6 +39,7 @@ const BIKE_MODELS = [
 const INSURANCE_OPTIONS = ["No", "TPO PRIVATE", "TPO PSV", "COMP PRIVATE", "COMP PSV"]
 const TRACKER_OPTIONS = ["No", "Yearly", "Lifetime"]
 const COLORS_LIST = ["", "Green", "Blue", "Black", "Red", "Yellow"]
+const BRANCH_OPTIONS = ["Industrial Area", "Kitengela"]
 
 const today = new Date().toISOString().split("T")[0]
 
@@ -74,6 +75,7 @@ type FormState = {
 
   // Invoice
   invoiceNumber: string
+  branch: string
   saleDate: string
   quantity: string
 }
@@ -96,6 +98,7 @@ const INITIAL_FORM: FormState = {
   referralName: "",
   deploymentName: "",
   invoiceNumber: "",
+  branch: "",
   saleDate: today,
   quantity: "1",
 }
@@ -133,6 +136,7 @@ export default function SalesRecordForm() {
     referralName?: string
     deploymentName?: string
     invoiceNumber?: string
+    branch?: string
     saleDate?: string
     quantity?: string
     invoicePhotoUrl?: string
@@ -163,6 +167,7 @@ export default function SalesRecordForm() {
     referralName: params.referralName || "",
     deploymentName: params.deploymentName || "",
     invoiceNumber: params.invoiceNumber === "—" ? "" : params.invoiceNumber || "",
+    branch: params.branch || "",
     saleDate: params.saleDate || today,
     quantity: params.quantity || "1",
   }))
@@ -206,6 +211,7 @@ export default function SalesRecordForm() {
           referralName: sale.referral_name || params.referralName || "",
           deploymentName: sale.deployment_name || params.deploymentName || "",
           invoiceNumber: sale.invoice_number || params.invoiceNumber || "",
+          branch: sale.branch || params.branch || "",
           saleDate: sale.invoice_date || today,
           quantity: String(sale.quantity_purchased || 1),
         })
@@ -262,6 +268,10 @@ export default function SalesRecordForm() {
   const [hasTrackerOpen, setHasTrackerOpen] = useState(false)
   const [hasTrackerItems, setHasTrackerItems] = useState(
     TRACKER_OPTIONS.map((o) => ({ label: o, value: o }))
+  )
+  const [branchOpen, setBranchOpen] = useState(false)
+  const [branchItems, setBranchItems] = useState(
+    BRANCH_OPTIONS.map((branch) => ({ label: branch, value: branch }))
   )
 
   // ── Helper to update form field ──
@@ -354,6 +364,8 @@ export default function SalesRecordForm() {
       ["bikeModel", "Bike model"],
       ["bikeRegistrationNumber", "Bike registration number"],
       ["chassisNumber", "Chassis number"],
+      ["invoiceNumber", "Invoice number"],
+      ["branch", "Branch"],
       ["saleDate", "Sale date"],
     ]
     if (form.customerType === "company") {
@@ -412,6 +424,7 @@ export default function SalesRecordForm() {
         referralName: form.referralName,
         deploymentName: form.deploymentName,
         invoiceNumber: form.invoiceNumber,
+        branch: form.branch,
         saleDate: form.saleDate,
         quantity: form.quantity,
       }
@@ -459,6 +472,7 @@ export default function SalesRecordForm() {
         customerLocation: form.customerLocation,
         bikeModel: form.bikeModel,
         invoiceNumber: form.invoiceNumber,
+        branch: form.branch,
         saleDate: form.saleDate,
         quantity: form.quantity,
         paymentType: form.paymentType,
@@ -838,7 +852,9 @@ export default function SalesRecordForm() {
           <Text style={s.sectionTitle}>Invoice Details</Text>
           <View style={s.grid2}>
             <View style={s.fieldGroup}>
-              <Text style={s.fieldLabel}>Invoice Number</Text>
+              <Text style={s.fieldLabel}>
+                Invoice Number <Text style={s.required}>*</Text>
+              </Text>
               <TextInput
                 style={s.input}
                 value={form.invoiceNumber.replace(/^INV-/, "")}
@@ -851,6 +867,30 @@ export default function SalesRecordForm() {
                 keyboardType="number-pad"
               />
               <Text style={s.hint}>Type just the number, INV- prefix added automatically</Text>
+            </View>
+
+            <View style={[s.fieldGroup, { zIndex: 2000 }]}>
+              <Text style={s.fieldLabel}>
+                Branch <Text style={s.required}>*</Text>
+              </Text>
+              <DropDownPicker
+                open={branchOpen}
+                value={form.branch || null}
+                items={branchItems}
+                setOpen={setBranchOpen}
+                setValue={(value) => {
+                  const branch = typeof value === "function" ? value(form.branch) : value
+                  updateField("branch", branch || "")
+                }}
+                setItems={setBranchItems}
+                placeholder="Select branch..."
+                style={s.dropdown}
+                dropDownContainerStyle={s.dropdownContainer}
+                listMode="SCROLLVIEW"
+                scrollViewProps={{ nestedScrollEnabled: true }}
+                zIndex={2000}
+                zIndexInverse={2000}
+              />
             </View>
 
             <View style={s.fieldGroup}>
@@ -1001,6 +1041,10 @@ export default function SalesRecordForm() {
                 <Text style={s.previewItem}>
                   <Text style={s.previewLabel}>Number: </Text>
                   {preview.invoiceNumber || "—"}
+                </Text>
+                <Text style={s.previewItem}>
+                  <Text style={s.previewLabel}>Branch: </Text>
+                  {preview.branch || "—"}
                 </Text>
                 <Text style={s.previewItem}>
                   <Text style={s.previewLabel}>Date: </Text>

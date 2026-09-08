@@ -7,6 +7,7 @@ export type PendingSalesFields = {
   customerLocation: string
   bikeModel: string
   invoiceNumber: string
+  branch: string
   saleDate: string
   quantity: string
   paymentType: string
@@ -37,6 +38,7 @@ export function buildPendingSalesRecord(
     freight: "—",
     sales_agent_name: fields.salesAgentName,
     sales_invoice_number: fields.invoiceNumber || "—",
+    branch: fields.branch || null,
     bike_model_sold: fields.bikeModel,
     sale_date: fields.saleDate,
     quantity: safeQuantity,

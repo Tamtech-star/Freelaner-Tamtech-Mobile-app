@@ -153,6 +153,7 @@ export interface ConvertedSaleRow {
   sales_agent_name: string
   commission_kes: string
   sales_invoice_number: string
+  branch?: string | null
   bike_model_sold: string
   sale_date: string
   quantity: number

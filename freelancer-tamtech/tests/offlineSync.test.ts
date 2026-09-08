@@ -13,6 +13,7 @@ const fields = {
   customerLocation: "Nairobi",
   bikeModel: "EKON450M1V2",
   invoiceNumber: "INV-200",
+  branch: "Industrial Area",
   saleDate: "2026-08-12",
   quantity: "2",
   paymentType: "cash",
@@ -26,6 +27,7 @@ test("buildPendingSalesRecord creates a renderable pending local sale", () => {
   assert.equal(record.customer_name, "John Kamau")
   assert.equal(record.quantity, 2)
   assert.equal(record.payment_status, "pending")
+  assert.equal(record.branch, "Industrial Area")
   assert.equal(record.sync_status, "pending")
   assert.equal(record.updated_at, "2026-08-12T10:00:00.000Z")
 })
@@ -55,4 +57,9 @@ test("successful queue IDs exclude rejected pushes", () => {
   ])
 
   assert.deepEqual(ids, ["queue-1", "queue-3"])
+})
+
+test("pending local sales carry the selected branch", () => {
+  const record = buildPendingSalesRecord("local-branch", { ...fields, branch: "Kitengela" }, "2026-08-12T10:00:00.000Z")
+  assert.equal(record.branch, "Kitengela")
 })

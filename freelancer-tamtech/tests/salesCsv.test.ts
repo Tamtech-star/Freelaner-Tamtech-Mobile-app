@@ -10,6 +10,7 @@ const sale = {
   freight: "Nairobi",
   sales_agent_name: "Mary Agent",
   sales_invoice_number: "INV-200",
+  branch: "Industrial Area",
   bike_model_sold: "EKON450M1V2",
   sale_date: "2026-08-12T14:35:22.000Z",
   quantity: 2,
@@ -43,18 +44,19 @@ const sale = {
 test("createSalesCsv exports headers and safely escapes spreadsheet values", () => {
   const csv = createSalesCsv([sale])
 
-  assert.match(csv, /^\uFEFFConversion Code,Submission Type,Customer Name/)
+  assert.match(csv, /^\uFEFFSubmission Type,Customer Name,Freelancer Name,Invoice Number,Branch/)
   assert.match(csv, /"Jane ""JJ"", Kamau"/)
   assert.match(csv, /Direct Sale/)
   assert.match(csv, /Cash/)
-  assert.match(csv, /Customer Type,Customer ID Number,Customer Phone,KRA PIN,Customer Location/)
+  assert.match(csv, /Customer Type,Customer ID Number,Customer Phone,KRA PIN/)
   assert.match(csv, /Bike Registration Number,Chassis Number,Finance Details,Bike Color/)
   assert.match(csv, /Insurance Type,Tracker Duration/)
   assert.doesNotMatch(csv, /Has Insurance/)
   assert.doesNotMatch(csv, /Has Tracker/)
-  assert.match(csv, /Invoice Photo URL,Sales Agreement URL,ID Document URL,KRA Document URL,Bike Photo URL,Chassis Photo URL/)
-  assert.match(csv, /12345678,0712345678,A001234567B,Embakasi/)
-  assert.match(csv, /https:\/\/example\.test\/chassis\.jpg/)
+  assert.match(csv, /INV-200,Industrial Area,EKON450M1V2/)
+  assert.doesNotMatch(csv, /Invoice Photo URL|Sales Agreement URL|ID Document URL|KRA Document URL|Bike Photo URL|Chassis Photo URL/)
+  assert.doesNotMatch(csv, /https:\/\/example\.test\//)
+  assert.doesNotMatch(csv, /Conversion Code|Sales Agent|Commission \(KES\)|Paid \(KES\)|Payment Status|Customer Location|Referral Name|Deployment Name/)
   assert.doesNotMatch(csv, /Freight/)
   assert.doesNotMatch(csv, /2026-08-12T14:35:22\.000Z/)
   assert.match(csv, /2026-08-12/)
