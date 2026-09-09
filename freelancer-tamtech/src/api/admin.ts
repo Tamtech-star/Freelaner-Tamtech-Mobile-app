@@ -91,6 +91,20 @@ export interface FreelancerRow {
   created_at: string
 }
 
+export interface FreelancerReportRow {
+  freelancer_id: string
+  freelancer_code: string
+  display_code: string | null
+  full_name: string
+  mpesa_phone: string | null
+  created_at: string
+  total_leads: number
+  quantity_sold: number
+  converted_sales: number
+  paid_commissions: number
+  total_paid_kes: number
+}
+
 export interface LeadRow {
   id: string
   lead_code: string
@@ -313,6 +327,16 @@ export async function getFreelancerById(id: string): Promise<FreelancerDetail> {
   const res = await api.get<FreelancerDetail>(`/portal/admin/freelancers/${id}`)
   return res.data
 }
+
+// Freelancer Report
+
+export async function getFreelancerReport(): Promise<FreelancerReportRow[]> {
+  const res = await api.get<{ freelancers: FreelancerReportRow[] }>('/portal/admin/freelancers/report')
+  return res.data.freelancers || []
+}
+
+export const getFreelancerReportLocalFirst = () => getResourceLocalFirst('freelancer-report', getFreelancerReport)
+export const syncFreelancerReportNow = () => refreshResource('freelancer-report', getFreelancerReport)
 
 //  Leads 
 export async function getAdminLeads(): Promise<LeadRow[]> {

@@ -10,6 +10,7 @@ export type LeadCardItem = {
   customer_phone?: string;
   location: string;
   county: string;
+  bike_model?: string;
   payment_type: string;
   quantity_interested: number;
   quantity_purchased?: number | null;
