@@ -178,6 +178,7 @@ export default function SalesRecordHome() {
         ...current,
         customer_name: sale.customer_full_name || current.customer_name,
         sales_invoice_number: sale.invoice_number || current.sales_invoice_number,
+        branch: sale.branch || current.branch,
         bike_model_sold: sale.bike_model_sold || current.bike_model_sold,
         sale_date: sale.invoice_date || current.sale_date,
         quantity: sale.quantity_purchased || current.quantity,
@@ -442,6 +443,7 @@ export default function SalesRecordHome() {
                   <DetailRow label="Freelancer" value={selectedRow.freight} />
                   <DetailRow label="Agent" value={selectedRow.sales_agent_name} />
                   <DetailRow label="Invoice" value={selectedRow.sales_invoice_number} />
+                  <DetailRow label="Branch" value={selectedRow.branch || "—"} />
                   <DetailRow label="Bike" value={selectedRow.bike_model_sold} />
                   <DetailRow label="Date" value={formatDate(selectedRow.sale_date)} />
                   <DetailRow label="Qty" value={String(selectedRow.quantity)} />

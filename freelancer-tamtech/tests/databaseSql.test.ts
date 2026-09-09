@@ -31,3 +31,9 @@ test("salesParams returns the same number of bound values", () => {
   assert.equal(values.length, 40)
   assert.equal(values.at(-1), "row.branch ?? null")
 })
+
+test("upsert conflict update keeps existing branch when the pull row omits it", () => {
+  const upsert = databaseSource.match(/ON CONFLICT\(id\) DO UPDATE SET[\s\S]*?branch=([a-zA-Z()_,. ]+)`,/)
+  assert.ok(upsert, "upsert conflict set clause should contain the branch assignment")
+  assert.match(upsert[1], /COALESCE\(excluded\.branch, sales_records\.branch\)/)
+})
