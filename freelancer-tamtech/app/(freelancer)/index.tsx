@@ -456,7 +456,7 @@ export default function FreelancerDashboard() {
             {dashboard && leadView === "VIEW_SUMMARY" && (
               <>
                 <View style={s.metricGrid}>
-                  <MetricCard label="Total Leads" value={metrics?.total_leads_submitted??0} color="#0f172a" onPress={() => loadDetailData(activeCode,"total_leads_submitted")} />
+                  <MetricCard label="Total Leads" value={metrics?.total_leads_submitted??0} color={COLORS.gradientStart} onPress={() => loadDetailData(activeCode,"total_leads_submitted")} />
                   <MetricCard label="Pending Processing" value={metrics?.pending_processing??0} color="#d97706" onPress={() => loadDetailData(activeCode,"pending_processing")} />
                   <MetricCard label="Paid Commissions" value={metrics?.paid_commissions??0} color="#059669" onPress={() => loadDetailData(activeCode,"paid_commissions")} />
                   <MetricCard label="Total Paid (KES)" value={formatCurrency(metrics?.total_paid_kes??0)} color="#059669" />
@@ -527,7 +527,7 @@ export default function FreelancerDashboard() {
                     <TouchableOpacity onPress={()=>setWorkflowStage(step.stage)} style={[s.stepCircle, isActive&&{backgroundColor:"#3b4aff"}, isComplete&&{backgroundColor:"#10b981"}, !isActive&&!isComplete&&{backgroundColor:"#e2e8f0"}]}>
                       {isComplete ? <Check size={20} color="#fff" /> : <IconComponent size={20} color={isActive ? "#fff" : "#94a3b8"} />}
                     </TouchableOpacity>
-                    <Text style={[s.stepLabel,isActive&&{color:"#3b4aff",fontWeight:"700"}]}>{step.label}</Text>
+                    <Text style={[s.stepLabel, { color: colors.muted }, isActive && { color: COLORS.gradientStart, fontWeight: "700" }]}>{step.label}</Text>
                     {idx < 1 && <View style={[s.stepLine,isComplete&&{backgroundColor:"#10b981"}]} />}
                   </View>
                 );
@@ -612,8 +612,8 @@ export default function FreelancerDashboard() {
                   </View>
                 ) : (
                   <>
-                    <Text style={s.stageTitle}>Step 2: Payment Acknowledged</Text>
-                    <Text style={s.stageDesc}>Confirm you have received the commission payment.</Text>
+                    <Text style={[s.stageTitle, { color: colors.heading }]}>Step 2: Payment Acknowledged</Text>
+                    <Text style={[s.stageDesc, { color: colors.muted }]}>Confirm you have received the commission payment.</Text>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Payment Code *</Text><TextInput style={s.input} value={paymentCode} onChangeText={setPaymentCode} placeholder="Payment code" placeholderTextColor="#94a3b8" autoCapitalize="characters" /></View>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Receipt URL (optional)</Text><TextInput style={s.input} value={paymentReceiptUrl} onChangeText={setPaymentReceiptUrl} placeholder="Receipt URL (optional)" placeholderTextColor="#94a3b8" /></View>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Notes</Text><TextInput style={[s.input,{minHeight:80,textAlignVertical:"top"}]} value={paymentNotes} onChangeText={setPaymentNotes} placeholder="Notes" placeholderTextColor="#94a3b8" multiline /></View>

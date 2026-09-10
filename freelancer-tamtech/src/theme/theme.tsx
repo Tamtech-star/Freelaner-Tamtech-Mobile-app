@@ -30,10 +30,12 @@ const LIGHT: AppTheme["colors"] = {
   success: "#16a34a", successSoft: "#f0fdf4", error: "#ef4444", errorSoft: "#fef2f2",
 }
 
+// Neutral "system dark" surfaces: no blue/navy undertone, matches the platform
+// dark theme. Brand blue stays as an accent (primary) only.
 const DARK: AppTheme["colors"] = {
-  bg: "#0f172a", card: "#172033", surface: "#202c40", border: "#334155",
-  heading: "#f8fafc", body: "#cbd5e1", muted: "#94a3b8", input: "#111827",
-  placeholder: "#64748b", primary: "#60a5fa", primarySoft: "#172554",
+  bg: "#121212", card: "#1e1e1e", surface: "#262626", border: "#333333",
+  heading: "#f5f5f5", body: "#d4d4d4", muted: "#a3a3a3", input: "#1a1a1a",
+  placeholder: "#737373", primary: "#60a5fa", primarySoft: "#2b2b2b",
   success: "#4ade80", successSoft: "#14532d", error: "#f87171", errorSoft: "#450a0a",
 }
 
@@ -41,7 +43,7 @@ const ThemeContext = createContext<AppTheme | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const scheme = useColorScheme()
-  const mode = scheme === "dark" ? "dark" : "light"
+  const mode: "light" | "dark" = "dark" // TEMP: forced dark for verification — revert
   const value = useMemo<AppTheme>(() => ({ mode, isDark: mode === "dark", colors: mode === "dark" ? DARK : LIGHT }), [mode])
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

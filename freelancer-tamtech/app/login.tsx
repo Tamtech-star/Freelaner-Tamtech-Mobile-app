@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 26,
     fontWeight: "800",
-    color: COLORS.heading,
+    color: COLORS.gradientStart,
     marginBottom: 6,
   },
   brandSubtitle: {
