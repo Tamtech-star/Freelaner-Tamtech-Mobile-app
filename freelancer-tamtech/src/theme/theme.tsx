@@ -43,7 +43,7 @@ const ThemeContext = createContext<AppTheme | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const scheme = useColorScheme()
-  const mode: "light" | "dark" = "dark" // TEMP: forced dark for verification — revert
+  const mode = scheme === "dark" ? "dark" : "light"
   const value = useMemo<AppTheme>(() => ({ mode, isDark: mode === "dark", colors: mode === "dark" ? DARK : LIGHT }), [mode])
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }

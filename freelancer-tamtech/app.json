@@ -2,7 +2,7 @@
   "expo": {
     "name": "Freelancer-Tamtech",
     "slug": "freelancer-tamtech",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -17,7 +17,7 @@
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 8,
+      "versionCode": 9,
       "package": "com.tamtechtools.freelancerapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
