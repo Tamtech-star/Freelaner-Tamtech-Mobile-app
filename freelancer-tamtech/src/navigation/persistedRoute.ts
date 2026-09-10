@@ -54,3 +54,25 @@ export function getRestorableAuthenticatedRoute(
   if (!RESTORABLE_ROUTES.has(savedPathname)) return fallback
   return savedPathname as AuthenticatedRoute
 }
+
+export interface RestoreStack {
+  home: AuthenticatedRoute
+  target: AuthenticatedRoute | null
+}
+
+/**
+ * The stack to build when restoring a saved session after process death.
+ * `home` is always the role home so the stack has a parent to return to;
+ * `target` is the saved screen to push on top of it, or null when the saved
+ * screen equals the home (or cannot be restored). Pushing a screen on top of
+ * the home keeps Android Back and in-app back buttons working; a lone
+ * `router.replace(savedScreen)` would leave a depth-1 stack with no history.
+ */
+export function getRestoreStack(
+  savedPathname: string | null | undefined,
+  role: UserRole,
+): RestoreStack {
+  const home = getDefaultAuthenticatedRoute(role)
+  const target = getRestorableAuthenticatedRoute(savedPathname, role)
+  return { home, target: target === home ? null : target }
+}
