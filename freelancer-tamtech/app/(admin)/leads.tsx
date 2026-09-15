@@ -9,15 +9,14 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
-  Linking,
   FlatList,
 } from "react-native"
 import { router } from "expo-router"
-import { getAdminLeadsLocalFirst, syncAdminLeadsNow, type LeadRow } from "../../src/api/admin"
+import { fetchAdminLeadsCsv, getAdminLeadsLocalFirst, syncAdminLeadsNow, type LeadRow } from "../../src/api/admin"
 import { COLORS, SHADOWS } from "../../src/constants/config"
+import { downloadCsvFile } from "../../src/utils/csvDownload"
 
 const BRAND_BLUE = "#2881FA"
-const CSV_URL = "https://spirospares.com/api/portal/admin/leads/csv"
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
   submitted: { bg: "#dbeafe", text: "#1e40af" },
@@ -33,6 +32,7 @@ export default function LeadsScreen() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [downloading, setDownloading] = useState(false)
   const [search, setSearch] = useState("")
 
   const load = useCallback(async () => {
@@ -59,11 +59,24 @@ export default function LeadsScreen() {
     }
   }, [])
 
+  // Downloads the same CSV the web admin exports, honouring the current search.
   const handleCsvDownload = async () => {
+    if (downloading) return
+    setDownloading(true)
     try {
-      await Linking.openURL(CSV_URL)
-    } catch {
-      Alert.alert("Error", "Could not open download link.")
+      const query = search.trim() ? `q=${encodeURIComponent(search.trim())}` : undefined
+      const csv = await fetchAdminLeadsCsv(query)
+      await downloadCsvFile(csv, `Leads_${new Date().toISOString().split("T")[0]}`)
+      Alert.alert("Download Complete", "The leads CSV was saved to the folder you selected.")
+    } catch (err: any) {
+      const status = err?.response?.status
+      const message =
+        status === 401
+          ? "Your session expired. Please log in again."
+          : err?.message || "Could not create the leads CSV file."
+      Alert.alert("Download Failed", message)
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -113,9 +126,18 @@ export default function LeadsScreen() {
             <Text style={s.headerTitle}>Total Leads</Text>
             <Text style={s.headerSub}>{leads.length} leads</Text>
           </View>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Text style={s.backText}>Back</Text>
-          </TouchableOpacity>
+          <View style={s.headerActions}>
+            <TouchableOpacity
+              onPress={handleCsvDownload}
+              disabled={downloading || filtered.length === 0}
+              style={[s.csvBtn, (downloading || filtered.length === 0) && s.disabledBtn]}
+            >
+              <Text style={s.csvBtnText}>{downloading ? "Preparing..." : "Download CSV"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Text style={s.backText}>Back</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search */}
@@ -226,6 +248,7 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   csvBtnText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  disabledBtn: { opacity: 0.5 },
   backBtn: {
     paddingHorizontal: 12,
     paddingVertical: 7,

@@ -24,8 +24,8 @@ import {
   getFreelancerDetails,
   submitLead,
   acknowledgePayment,
-  downloadReceipt,
 } from "../../src/api/portal";
+import { downloadPaymentReceipt } from "../../src/utils/receiptDownload";
 
 //types
 type LeadCardItem = {
@@ -305,6 +305,7 @@ export default function FreelancerDashboard() {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [paymentDone, setPaymentDone] = useState(false);
   const [paymentSubCode, setPaymentSubCode] = useState<string | null>(null);
+  const [receiptBusyCode, setReceiptBusyCode] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async (code: string, silent = false) => {
     const requestedCode = code.trim().toUpperCase();
@@ -380,10 +381,17 @@ export default function FreelancerDashboard() {
     finally { setWfSubmitting(false); }
   };
 
-  const handleDownloadReceipt = async () => {
-    if (!paymentSubCode) return;
-    try { await downloadReceipt(paymentSubCode); }
-    catch {}
+  const handleDownloadReceipt = async (code?: string | null) => {
+    const target = (code || paymentSubCode || "").trim().toUpperCase();
+    if (!target || receiptBusyCode) return;
+    setReceiptBusyCode(target);
+    try {
+      await downloadPaymentReceipt(target);
+    } catch (err: any) {
+      Alert.alert("Receipt Download Failed", err?.message || "Could not download the payment receipt.");
+    } finally {
+      setReceiptBusyCode(null);
+    }
   };
 
   useEffect(() => {
@@ -475,7 +483,20 @@ export default function FreelancerDashboard() {
                     {payments.length===0 ? <Text style={s.emptyText}>No payments yet.</Text> : payments.map(p=>(
                       <View key={p.payment_code} style={[s.paymentRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={{flex:1}}><Text style={[s.paymentCode, { color: colors.heading }]}>{p.payment_code}</Text><Text style={[s.paymentMeta, { color: colors.muted }]}>{p.payment_date||"—"} · {formatCurrency(p.amount_paid_kes)}</Text></View>
-                        <StatusBadge status="paid" />
+                        <View style={s.paymentRowActions}>
+                          <StatusBadge status="paid" />
+                          <TouchableOpacity
+                            onPress={() => handleDownloadReceipt(p.payment_code)}
+                            disabled={receiptBusyCode !== null}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Download receipt for ${p.payment_code}`}
+                            style={s.receiptLink}
+                          >
+                            {receiptBusyCode === p.payment_code
+                              ? <ActivityIndicator size="small" color={COLORS.gradientStart} />
+                              : <Text style={s.receiptLinkText}>Receipt</Text>}
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     ))}
                   </View>
@@ -607,7 +628,7 @@ export default function FreelancerDashboard() {
                     <View style={s.successCircle}><CheckCircle size={32} color="#059669" /></View>
                     <Text style={[s.successTitle, { color: colors.heading }]}>Payment Acknowledged Successfully</Text>
                     <Text style={[s.successDesc, { color: colors.body }]}>Your payment has been acknowledged. Download your receipt below.</Text>
-                    {paymentSubCode && <TouchableOpacity onPress={handleDownloadReceipt} style={[s.receiptBtn,{marginTop:16}]}><Text style={s.receiptBtnText}>Download Receipt PDF ({paymentSubCode})</Text></TouchableOpacity>}
+                    {paymentSubCode && <TouchableOpacity onPress={()=>handleDownloadReceipt(paymentSubCode)} disabled={receiptBusyCode!==null} style={[s.receiptBtn,{marginTop:16}]}>{receiptBusyCode===paymentSubCode?<ActivityIndicator color={COLORS.gradientStart} />:<Text style={s.receiptBtnText}>Download Receipt PDF ({paymentSubCode})</Text>}</TouchableOpacity>}
                     <TouchableOpacity onPress={()=>{setPaymentDone(false);setActiveTab("cards");setLeadView("VIEW_SUMMARY");}} style={[s.submitBtn,{marginTop:12}]}><Text style={s.submitBtnText}>Go to Dashboard →</Text></TouchableOpacity>
                   </View>
                 ) : (
@@ -674,6 +695,9 @@ const s = StyleSheet.create({
   paymentRow: { flexDirection:"row", alignItems:"center", justifyContent:"space-between", backgroundColor:"#f8fafc", borderRadius:8, padding:12, marginBottom:8, borderWidth:1, borderColor:"#f1f5f9" },
   paymentCode: { fontSize:14, fontWeight:"600", color:"#0f172a" },
   paymentMeta: { fontSize:11, color:"#64748b", marginTop:2 },
+  paymentRowActions: { flexDirection:"row", alignItems:"center", gap:10 },
+  receiptLink: { minWidth:56, paddingVertical:6, paddingHorizontal:4, borderBottomWidth:1, borderBottomColor:COLORS.gradientStart, alignItems:"center" },
+  receiptLinkText: { fontSize:12, fontWeight:"700", color:COLORS.gradientStart },
   emptyText: { fontSize:13, color:"#64748b", textAlign:"center", padding:24 },
   leadsSection: { marginTop:8 },
   leadsHeader: { flexDirection:"row", alignItems:"center", gap:12, marginBottom:16, paddingBottom:12, borderBottomWidth:1, borderBottomColor:"#f1f5f9" },

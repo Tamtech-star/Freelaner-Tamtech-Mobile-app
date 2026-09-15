@@ -1,4 +1,5 @@
 import api from "./client";
+import { decodeReceiptErrorMessage, toReceiptBytes } from "../utils/receiptPdf";
 
 // ─Types matching reference web dashboard 
 
@@ -166,15 +167,24 @@ export async function acknowledgePayment(payload: {
   return res.data;
 }
 
+// The endpoint returns a generated PDF, so fetch raw bytes and let the caller
+// write them to disk (a Blob is not usable by expo-file-system).
 export async function downloadReceipt(
   paymentCode: string
-): Promise<Blob> {
-  const res = await api.post(
-    "/portal/commissions/receipt",
-    { paymentCode },
-    { responseType: "blob" }
-  );
-  return res.data;
+): Promise<Uint8Array> {
+  try {
+    const res = await api.post(
+      "/portal/commissions/receipt",
+      { paymentCode },
+      { responseType: "arraybuffer" }
+    );
+    return toReceiptBytes(res.data);
+  } catch (error: any) {
+    // With responseType "arraybuffer" the JSON error body arrives as bytes.
+    const message = decodeReceiptErrorMessage(error?.response?.data);
+    if (message) throw new Error(message);
+    throw error;
+  }
 }
 
 export async function lookupPaymentCode(

@@ -347,6 +347,18 @@ export async function getAdminLeads(): Promise<LeadRow[]> {
 export const getAdminLeadsLocalFirst = () => getResourceLocalFirst('admin-leads', getAdminLeads)
 export const syncAdminLeadsNow = () => refreshResource('admin-leads', getAdminLeads)
 
+/**
+ * Leads CSV from the server, so the mobile file matches the web admin export
+ * (same columns and filters). The shared axios client attaches the bearer token.
+ */
+export async function fetchAdminLeadsCsv(query?: string): Promise<string> {
+  const res = await api.get<string>(`/portal/admin/leads/csv${query ? `?${query}` : ''}`, {
+    responseType: 'text',
+    transformResponse: [(data) => data],
+  })
+  return typeof res.data === 'string' ? res.data : String(res.data ?? '')
+}
+
 // Converted Sales 
 
 export async function getAllSales(): Promise<ConvertedSaleRow[]> {
