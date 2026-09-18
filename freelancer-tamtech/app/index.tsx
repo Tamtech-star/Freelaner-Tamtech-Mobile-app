@@ -74,6 +74,10 @@ export default function Index() {
     void Linking.openURL("whatsapp://send?phone=254118673848")
   }, [])
 
+  const openWebsite = useCallback(() => {
+    void Linking.openURL("https://tamtech.co.ke")
+  }, [])
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
@@ -125,7 +129,9 @@ export default function Index() {
                 <Text style={styles.footerLine}>Phone: +254 733 959 383</Text>
                 <Text style={styles.footerLine}>Email: tamtechtools@gmail.com</Text>
               </View>
-              <Text style={styles.footerLine}>Web: Tamtech.co.ke</Text>
+              <Pressable accessibilityRole="link" accessibilityLabel="Visit tamtech.co.ke" onPress={openWebsite} hitSlop={8}>
+                <Text style={styles.footerLink}>Web: tamtech.co.ke</Text>
+              </Pressable>
               <Text style={styles.developer}>Developer: TAMTECH</Text>
             </View>
           </Animated.View>
@@ -143,7 +149,7 @@ const styles = StyleSheet.create({
   topLabel: { color: "#152B27", fontSize: 10, fontWeight: "900", letterSpacing: 1.4 },
   topDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#58A85C" },
   topMeta: { color: "#81918A", fontSize: 9, fontWeight: "700", letterSpacing: 1.1 },
-  hero: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 52 },
+  hero: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 36 },
   logoLockup: { alignItems: "center", justifyContent: "center", minHeight: 222 },
   markWrap: { width: 128, height: 128, alignItems: "center", justifyContent: "center" },
   logoMark: { width: 128, height: 128, borderRadius: 64 },
@@ -158,15 +164,16 @@ const styles = StyleSheet.create({
   loginIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#54A85C", alignItems: "center", justifyContent: "center", marginLeft: 14 },
   buttonPressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   lowerContent: { width: "100%" },
-  divider: { height: 1, backgroundColor: "#DCE5DF", marginBottom: 20 },
+  divider: { height: 1, backgroundColor: "#DCE5DF", marginBottom: 12 },
   contactRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   contactCopy: { flex: 1, paddingRight: 18 },
   contactEyebrow: { color: "#7A9087", fontSize: 9, fontWeight: "900", letterSpacing: 1.7 },
   contactTitle: { color: "#1D3932", fontSize: 15, fontWeight: "700", marginTop: 5 },
   whatsappButton: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: "#299A59", shadowColor: "#299A59", shadowOpacity: 0.2, shadowRadius: 9, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
-  footer: { borderTopWidth: 1, borderTopColor: "#E4EAE5", marginTop: 28, paddingTop: 17 },
+  footer: { borderTopWidth: 1, borderTopColor: "#E4EAE5", marginTop: 14, paddingTop: 12 },
   footerCompany: { color: "#1D3932", fontSize: 12, fontWeight: "900", marginBottom: 7 },
   footerLine: { color: "#7B8983", fontSize: 10, lineHeight: 16 },
+  footerLink: { color: "#1B6E3F", fontSize: 10, lineHeight: 16, fontWeight: "700", textDecorationLine: "underline" },
   footerContactLine: { flexDirection: "row", flexWrap: "wrap", columnGap: 18 },
   developer: { color: "#4E6B60", fontSize: 9, fontWeight: "900", letterSpacing: 1.1, marginTop: 15 },
 })
