@@ -108,14 +108,24 @@ export interface RegistrationResponse {
 export async function registerFreelancer(
   payload: FreelancerRegistrationPayload
 ): Promise<RegistrationResponse> {
-  const response = await api.post<RegistrationResponse & { error?: string }>(
-    '/portal/freelancers/register',
-    payload
-  )
+  try {
+    const response = await api.post<RegistrationResponse & { error?: string }>(
+      '/portal/freelancers/register',
+      payload
+    )
 
-  if (response.data.error) {
-    throw new Error(response.data.error)
+    if (response.data.error) {
+      throw new Error(response.data.error)
+    }
+
+    return response.data
+  } catch (err: any) {
+    // Surface the backend's friendly message (e.g. duplicate-email 409)
+    // instead of the raw axios "Request failed with status code 409".
+    const serverMessage = err?.response?.data?.error
+    if (serverMessage) {
+      throw new Error(serverMessage)
+    }
+    throw err
   }
-
-  return response.data
 }
