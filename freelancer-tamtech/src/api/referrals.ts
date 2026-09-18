@@ -5,7 +5,9 @@ export interface ReferralPayload {
   referrer_phone: string;
   customer_name: string;
   customer_phone: string;
+  customer_type?: "individual" | "company";
   customer_id_number?: string;
+  kra_pin?: string;
   bike_model?: string;
   payment_mode?: string;
   quantity?: number;
