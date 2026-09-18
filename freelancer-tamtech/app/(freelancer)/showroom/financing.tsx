@@ -52,7 +52,7 @@ type FinancingOption = {
 const OPTIONS: FinancingOption[] = [
   {
     id: "hire-purchase",
-    eyebrow: "WATU FINANCING",
+    eyebrow: "LOAN FINANCING",
     title: "Hire Purchase",
     summary: "Ride Green. Save More. Pay daily while you earn.",
     accent: "#37E6FF",
@@ -63,7 +63,7 @@ const OPTIONS: FinancingOption[] = [
       { label: "Duration", value: "18 Months" },
       { label: "Requirements", value: "ID, KRA PIN, 6mo M-PESA" },
     ],
-    guideIntro: "Watu Financing makes EV ownership easy. You do NOT need a Driving License or Stage Chairman details to qualify!",
+    guideIntro: "Loan Financing makes EV ownership easy. You do NOT need a Driving License or Stage Chairman details to qualify!",
     guidePoints: [
       "Take advantage of the limited KES 15,000 deposit discount.",
       "Pay just KES 340 daily for an 18-month duration.",
