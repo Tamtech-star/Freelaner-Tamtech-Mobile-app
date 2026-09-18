@@ -290,6 +290,7 @@ export default function FreelancerDashboard() {
   // Dropdown UI States
   const [leadBikeOpen, setLeadBikeOpen] = useState(false);
   const [leadPaymentOpen, setLeadPaymentOpen] = useState(false);
+  const [leadCustomerTypeOpen, setLeadCustomerTypeOpen] = useState(false);
 
   const [bikeItems, setBikeItems] = useState(
     BIKE_MODELS.map((model) => ({ label: model, value: model }))
@@ -298,9 +299,13 @@ export default function FreelancerDashboard() {
     { label: "Cash", value: "cash" },
     { label: "Loan", value: "loan" },
   ]);
+  const [leadCustomerTypeItems, setLeadCustomerTypeItems] = useState([
+    { label: "Individual", value: "individual" },
+    { label: "Company", value: "company" },
+  ]);
 
   // Lead form
-  const [leadForm, setLeadForm] = useState({ customerFullName: "", customerIdNumber: "", customerPhone: "", bikeModel: "", paymentType: "", quantityInterested: "1", residenceLocation: "", county: "", leadNotes: "", duplicateOverrideReason: "" });
+  const [leadForm, setLeadForm] = useState({ customerFullName: "", customerType: "individual" as "individual" | "company", customerIdNumber: "", kraPin: "", customerPhone: "", bikeModel: "", paymentType: "", quantityInterested: "1", residenceLocation: "", county: "", leadNotes: "", duplicateOverrideReason: "" });
   
   // Payment
   const [paymentCode, setPaymentCode] = useState("");
@@ -353,20 +358,29 @@ export default function FreelancerDashboard() {
 
   // Lead submit 
   const handleLeadSubmit = async () => {
-    if (!leadForm.customerFullName.trim() || !leadForm.customerIdNumber.trim() || !leadForm.customerPhone.trim() || !leadForm.bikeModel || !leadForm.paymentType) {
+    if (!leadForm.customerFullName.trim() || !leadForm.customerPhone.trim() || !leadForm.bikeModel || !leadForm.paymentType) {
       Alert.alert("Missing", "All required fields (*) must be filled."); return;
+    }
+    if (leadForm.customerType === "company" && !leadForm.kraPin.trim()) {
+      Alert.alert("Missing", "KRA PIN is required for company customers."); return;
+    }
+    if (leadForm.customerType !== "company" && !leadForm.customerIdNumber.trim()) {
+      Alert.alert("Missing", "Customer ID number is required for individual customers."); return;
     }
     setWfSubmitting(true); setWfMessage(null); setWfError(null);
     try {
       const payload: Record<string,string> = {
-        customerFullName:leadForm.customerFullName,customerIdNumber:leadForm.customerIdNumber,customerPhone:leadForm.customerPhone,
+        customerFullName:leadForm.customerFullName,customerType:leadForm.customerType,
+        customerIdNumber:leadForm.customerType === "company" ? "" : leadForm.customerIdNumber,
+        kraPin:leadForm.customerType === "company" ? leadForm.kraPin : "",
+        customerPhone:leadForm.customerPhone,
         bikeModel:leadForm.bikeModel,paymentType:leadForm.paymentType,quantityInterested:leadForm.quantityInterested,
         residenceLocation:leadForm.residenceLocation,county:leadForm.county,leadNotes:leadForm.leadNotes,
         duplicateOverrideReason:leadForm.duplicateOverrideReason,freelancerCode:activeCode,
       };
       await submitLead(payload);
       setWfMessage(`Lead created for ${leadForm.customerFullName}!`);
-      setLeadForm({ customerFullName:"",customerIdNumber:"",customerPhone:"",bikeModel:"",paymentType:"",quantityInterested:"1",residenceLocation:"",county:"",leadNotes:"",duplicateOverrideReason:"" });
+      setLeadForm({ customerFullName:"",customerType:"individual",customerIdNumber:"",kraPin:"",customerPhone:"",bikeModel:"",paymentType:"",quantityInterested:"1",residenceLocation:"",county:"",leadNotes:"",duplicateOverrideReason:"" });
       loadDashboard(activeCode, true);
       // Scroll back up so the "Lead created" confirmation is immediately visible.
       scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -570,7 +584,29 @@ export default function FreelancerDashboard() {
                 <Text style={[s.stageDesc, { color: colors.muted }]}>Submit a new customer lead.</Text>
                 <View style={s.formGrid}>
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer Full Name *</Text><TextInput style={s.input} value={leadForm.customerFullName} onChangeText={v=>setLeadForm(p=>({...p,customerFullName:v}))} placeholder="Customer Full Name *" placeholderTextColor="#94a3b8" /></View>
-                  <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer ID Number / KRA PIN *</Text><TextInput style={s.input} value={leadForm.customerIdNumber} onChangeText={v=>setLeadForm(p=>({...p,customerIdNumber:v}))} placeholder="Customer ID Number / KRA PIN *" placeholderTextColor="#94a3b8" /></View>
+                  <View style={[s.fieldGroup, { zIndex: 4000 }]}>
+                    <Text style={s.fieldLabel}>Customer Type *</Text>
+                    <DropDownPicker
+                      open={leadCustomerTypeOpen}
+                      value={leadForm.customerType}
+                      items={leadCustomerTypeItems}
+                      setOpen={setLeadCustomerTypeOpen}
+                      setValue={(val: any) => setLeadForm(p => ({ ...p, customerType: typeof val === 'function' ? val(p.customerType) : val }))}
+                      setItems={setLeadCustomerTypeItems}
+                      placeholder="Select Customer Type *"
+                      style={s.dropdown}
+                      textStyle={s.dropdownText}
+                      dropDownContainerStyle={s.dropdownContainer}
+                      zIndex={4000}
+                      zIndexInverse={1000}
+                      listMode="SCROLLVIEW"
+                    />
+                  </View>
+                  {leadForm.customerType === "company" ? (
+                    <View style={s.fieldGroup}><Text style={s.fieldLabel}>KRA PIN *</Text><TextInput style={s.input} value={leadForm.kraPin} onChangeText={v=>setLeadForm(p=>({...p,kraPin:v}))} placeholder="Company KRA PIN *" placeholderTextColor="#94a3b8" autoCapitalize="characters" /></View>
+                  ) : (
+                    <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer ID Number *</Text><TextInput style={s.input} value={leadForm.customerIdNumber} onChangeText={v=>setLeadForm(p=>({...p,customerIdNumber:v}))} placeholder="Customer ID Number *" placeholderTextColor="#94a3b8" /></View>
+                  )}
                   <View style={s.fieldGroup}><Text style={s.fieldLabel}>Customer Phone *</Text><TextInput style={s.input} value={leadForm.customerPhone} onChangeText={v=>setLeadForm(p=>({...p,customerPhone:v}))} placeholder="Customer Phone *" placeholderTextColor="#94a3b8" keyboardType="phone-pad" /></View>
                   
                   {/* DropDownPicker */}
