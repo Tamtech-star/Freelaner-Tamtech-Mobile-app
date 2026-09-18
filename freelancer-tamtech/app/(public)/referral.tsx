@@ -24,6 +24,8 @@ export default function ReferralScreen() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerIdNumber, setCustomerIdNumber] = useState("");
+  const [customerType, setCustomerType] = useState<"individual" | "company">("individual");
+  const [kraPin, setKraPin] = useState("");
   
   const [paymentMode, setPaymentMode] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -33,6 +35,13 @@ export default function ReferralScreen() {
   const [paymentModeItems, setPaymentModeItems] = useState([
     { label: "Cash", value: "cash" },
     { label: "Loan", value: "loan" },
+  ]);
+
+  // Customer type selector
+  const [customerTypeOpen, setCustomerTypeOpen] = useState(false);
+  const [customerTypeItems, setCustomerTypeItems] = useState([
+    { label: "Individual", value: "individual" },
+    { label: "Company", value: "company" },
   ]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -56,8 +65,16 @@ export default function ReferralScreen() {
       Alert.alert("Missing Fields", "Your name and phone number are required.");
       return;
     }
-    if (!customerName.trim() || !customerPhone.trim() || !customerIdNumber.trim()) {
-      Alert.alert("Missing Fields", "Customer name, phone, and ID number are required.");
+    if (!customerName.trim() || !customerPhone.trim()) {
+      Alert.alert("Missing Fields", "Customer name and phone are required.");
+      return;
+    }
+    if (customerType === "individual" && !customerIdNumber.trim()) {
+      Alert.alert("Missing Fields", "Customer ID number is required.");
+      return;
+    }
+    if (customerType === "company" && !kraPin.trim()) {
+      Alert.alert("Missing Fields", "KRA PIN is required for companies.");
       return;
     }
     if (!paymentMode) {
@@ -73,7 +90,9 @@ export default function ReferralScreen() {
         referrer_phone: referrerPhone.trim(),
         customer_name: customerName.trim(),
         customer_phone: customerPhone.trim(),
-        customer_id_number: customerIdNumber.trim() || undefined,
+        customer_type: customerType,
+        customer_id_number: customerType === "individual" ? customerIdNumber.trim() : undefined,
+        kra_pin: customerType === "company" ? kraPin.trim() : undefined,
         payment_mode: paymentMode, 
         quantity: parseInt(quantity || "1", 10), 
         referral_code: referralCode.trim() || undefined,
@@ -106,6 +125,8 @@ export default function ReferralScreen() {
               setCustomerName("");
               setCustomerPhone("");
               setCustomerIdNumber("");
+              setCustomerType("individual");
+              setKraPin("");
               setPaymentMode("");
               setQuantity("1");
             }}
@@ -187,6 +208,26 @@ export default function ReferralScreen() {
         {/* Section 2: Customer Information */}
         <View style={[styles.section, { zIndex: 2000 }]}>
           <Text style={styles.sectionTitle}>Customer Information</Text>
+          <View style={[styles.field, { zIndex: 3000 }]}>
+            <Text style={styles.label}>Customer Type *</Text>
+            <DropDownPicker
+              open={customerTypeOpen}
+              value={customerType}
+              items={customerTypeItems}
+              setOpen={setCustomerTypeOpen}
+              setValue={(cb) => {
+                const v = typeof cb === "function" ? cb(customerType) : cb
+                setCustomerType(v as "individual" | "company")
+              }}
+              setItems={setCustomerTypeItems}
+              placeholder="Select customer type"
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              zIndex={3000}
+              zIndexInverse={1000}
+            />
+          </View>
           <View style={styles.field}>
             <Text style={styles.label}>Customer Name *</Text>
             <TextInput
@@ -208,16 +249,30 @@ export default function ReferralScreen() {
               keyboardType="phone-pad"
             />
           </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Customer ID Number * </Text>
-            <TextInput
-              style={styles.input}
-              value={customerIdNumber}
-              onChangeText={setCustomerIdNumber}
-              placeholder="Customer's national ID"
-              placeholderTextColor={COLORS.placeholder}
-            />
-          </View>
+          {customerType === "individual" ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>Customer ID Number *</Text>
+              <TextInput
+                style={styles.input}
+                value={customerIdNumber}
+                onChangeText={setCustomerIdNumber}
+                placeholder="Customer's national ID"
+                placeholderTextColor={COLORS.placeholder}
+              />
+            </View>
+          ) : (
+            <View style={styles.field}>
+              <Text style={styles.label}>KRA PIN *</Text>
+              <TextInput
+                style={styles.input}
+                value={kraPin}
+                onChangeText={setKraPin}
+                placeholder="Company KRA PIN"
+                placeholderTextColor={COLORS.placeholder}
+                autoCapitalize="characters"
+              />
+            </View>
+          )}
           
           {/* Fixed Payment Mode Field with correct Z-Index and layout */}
           <View style={[styles.field, { zIndex: 2000 }]}>
