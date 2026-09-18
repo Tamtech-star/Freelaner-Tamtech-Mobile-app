@@ -106,7 +106,7 @@ export default function RegisterScreen() {
 
     try {
       const result = await registerFreelancer(form)
-      setSuccess(result.message || "Registration successful! Check your email for your freelancer code.")
+      setSuccess(`${result.message || "Registration successful!"} Kindly check your email for your login credentials.`)
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.")
     } finally {
