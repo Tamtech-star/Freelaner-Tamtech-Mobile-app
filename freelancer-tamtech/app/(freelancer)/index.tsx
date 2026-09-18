@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect } from "react";
+﻿import { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import DropDownPicker from "react-native-dropdown-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { ClipboardList, Wallet, FileText, CheckCircle, Clock, CreditCard, XCircle, Check } from "lucide-react-native";
@@ -264,6 +265,8 @@ const ldS = StyleSheet.create({
 
 export default function FreelancerDashboard() {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
   const { user, logout } = useAuthStore()
   const sessionCode = user?.code || ""
   const [codeInput, setCodeInput] = useState(user?.code || "")
@@ -365,6 +368,8 @@ export default function FreelancerDashboard() {
       setWfMessage(`Lead created for ${leadForm.customerFullName}!`);
       setLeadForm({ customerFullName:"",customerIdNumber:"",customerPhone:"",bikeModel:"",paymentType:"",quantityInterested:"1",residenceLocation:"",county:"",leadNotes:"",duplicateOverrideReason:"" });
       loadDashboard(activeCode, true);
+      // Scroll back up so the "Lead created" confirmation is immediately visible.
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     } catch (err: any) { setWfError(err.message); }
     finally { setWfSubmitting(false); }
   };
@@ -409,8 +414,9 @@ export default function FreelancerDashboard() {
   return (
     <View style={[s.container, { backgroundColor: colors.bg }]}>
       <ScrollView 
+        ref={scrollRef}
         style={[s.scroll, { backgroundColor: colors.bg }]}
-        contentContainerStyle={{ paddingBottom:50 }}
+        contentContainerStyle={{ paddingBottom: activeTab === "workflow" && workflowStage === 1 ? 120 : 50 }}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(activeCode,true).finally(()=>setRefreshing(false)); }} tintColor={COLORS.gradientStart} />}
@@ -613,9 +619,6 @@ export default function FreelancerDashboard() {
                 </View>
                 <View style={s.fieldGroup}><Text style={s.fieldLabel}>Lead notes / remarks (optional)</Text><TextInput style={[s.input,{minHeight:80,textAlignVertical:"top"}]} value={leadForm.leadNotes} onChangeText={v=>setLeadForm(p=>({...p,leadNotes:v}))} placeholder="Lead notes / remarks (optional)" placeholderTextColor="#94a3b8" multiline /></View>
                 <View style={s.fieldGroup}><Text style={s.fieldLabel}>Duplicate override reason (optional)</Text><TextInput style={[s.input,{minHeight:60,textAlignVertical:"top"}]} value={leadForm.duplicateOverrideReason} onChangeText={v=>setLeadForm(p=>({...p,duplicateOverrideReason:v}))} placeholder="Duplicate override reason (optional)" placeholderTextColor="#94a3b8" multiline /></View>
-                <TouchableOpacity onPress={handleLeadSubmit} disabled={wfSubmitting} style={[s.submitBtn,wfSubmitting&&{opacity:.5}]}>
-                  {wfSubmitting?<ActivityIndicator color="#fff" />:<Text style={s.submitBtnText}>Create Lead</Text>}
-                </TouchableOpacity>
               </View>
             )}
 
@@ -634,7 +637,7 @@ export default function FreelancerDashboard() {
                   <>
                     <Text style={[s.stageTitle, { color: colors.heading }]}>Step 2: Payment Acknowledged</Text>
                     <Text style={[s.stageDesc, { color: colors.muted }]}>Confirm you have received the commission payment.</Text>
-                    <View style={s.fieldGroup}><Text style={s.fieldLabel}>Payment Code *</Text><TextInput style={s.input} value={paymentCode} onChangeText={setPaymentCode} placeholder="Payment code" placeholderTextColor="#94a3b8" autoCapitalize="characters" /></View>
+                    <View style={s.fieldGroup}><Text style={s.fieldLabel}>Payment Code *</Text><TextInput style={s.input} value={paymentCode} onChangeText={(v)=>{setPaymentCode(v); setWfError(null);}} placeholder="Payment code" placeholderTextColor="#94a3b8" autoCapitalize="characters" /></View>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Receipt URL (optional)</Text><TextInput style={s.input} value={paymentReceiptUrl} onChangeText={setPaymentReceiptUrl} placeholder="Receipt URL (optional)" placeholderTextColor="#94a3b8" /></View>
                     <View style={s.fieldGroup}><Text style={s.fieldLabel}>Notes</Text><TextInput style={[s.input,{minHeight:80,textAlignVertical:"top"}]} value={paymentNotes} onChangeText={setPaymentNotes} placeholder="Notes" placeholderTextColor="#94a3b8" multiline /></View>
                     <TouchableOpacity onPress={handlePaymentAcknowledge} disabled={wfSubmitting} style={[s.submitBtn,wfSubmitting&&{opacity:.5}]}>{wfSubmitting?<ActivityIndicator color="#fff" />:<Text style={s.submitBtnText}>Acknowledge Payment</Text>}</TouchableOpacity>
@@ -645,6 +648,14 @@ export default function FreelancerDashboard() {
           </View>
         )}
       </ScrollView>
+
+      {activeTab === "workflow" && workflowStage === 1 && (
+        <View style={[s.stickySubmitBar, { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 16) + 24 }]}>
+          <TouchableOpacity onPress={handleLeadSubmit} disabled={wfSubmitting} style={[s.submitBtn, { marginTop: 0 }, wfSubmitting && { opacity: .5 }]}>
+            {wfSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={s.submitBtnText}>Create Lead</Text>}
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -727,6 +738,7 @@ const s = StyleSheet.create({
   inlineError: { fontSize:10, color:"#dc2626", marginTop:2 },
   submitBtn: { marginTop:16, backgroundColor:COLORS.gradientStart, paddingVertical:14, borderRadius:12, alignItems:"center" },
   submitBtnText: { color:"#fff", fontSize:15, fontWeight:"700" },
+  stickySubmitBar: { position:"absolute", bottom:0, left:0, right:0, paddingHorizontal:16, paddingTop:10, borderTopWidth:1, borderTopColor:"#e2e8f0", backgroundColor:"#fff", shadowColor:"#000", shadowOpacity:0.08, shadowRadius:8, shadowOffset:{width:0,height:-2}, elevation:8 },
   filePickerBtn: { borderWidth:1, borderColor:"#cbd5e1", borderRadius:8, borderStyle:"dashed", paddingVertical:14, alignItems:"center", backgroundColor:"#f8fafc" },
   filePickerText: { fontSize:13, color:"#64748b" },
   fileAttached: { flexDirection:"row", alignItems:"center", justifyContent:"space-between", borderWidth:1, borderColor:"#cbd5e1", borderRadius:8, padding:10, backgroundColor:"#f0fdf4" },
