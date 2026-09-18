@@ -419,7 +419,6 @@ export default function FreelancerDashboard() {
         <View style={[s.header, { borderBottomColor: colors.border }]}>
           <View style={s.headerLeft}>
             <Text style={[s.headerTitle, { color: colors.heading }]}>{freelancer?.full_name || "Dashboard"}</Text>
-            {freelancer?.display_code ? <View style={[s.codeBadge, { backgroundColor: colors.successSoft }]}><Text style={[s.codeBadgeText, { color: colors.success }]}>{freelancer.display_code}</Text></View> : null}
           </View>
           <TouchableOpacity onPress={handleLogout} style={[s.logoutBtn, { borderColor: colors.border }]}><Text style={[s.logoutText, { color: colors.muted }]}>Logout</Text></TouchableOpacity>
         </View>
@@ -441,7 +440,7 @@ export default function FreelancerDashboard() {
         {/* Code input */}
         <View style={s.codeRow}>
           <TextInput style={[s.codeInput, { color: colors.heading, backgroundColor: colors.input, borderColor: colors.border }]} value={codeInput} onChangeText={setCodeInput} placeholder="Switch freelancer code" placeholderTextColor={colors.placeholder} autoCapitalize="characters" />
-          <TouchableOpacity onPress={handleReload} style={s.codeGo}><Text style={s.codeGoText}>Go</Text></TouchableOpacity>
+          <TouchableOpacity onPress={handleReload} style={s.codeGo}><Text style={s.codeGoText}>Refresh</Text></TouchableOpacity>
         </View>
 
         <TouchableOpacity onPress={() => router.push("/(freelancer)/showroom")} style={s.showroomEntry}>
@@ -658,8 +657,6 @@ const s = StyleSheet.create({
   header: { flexDirection:"row", alignItems:"center", justifyContent:"space-between", marginBottom:16 },
   headerLeft: { flexDirection:"row", alignItems:"center", gap:8, flex:1 },
   headerTitle: { fontSize:22, fontWeight:"700", color:"#0f172a" },
-  codeBadge: { backgroundColor:"#d1fae5", paddingHorizontal:8, paddingVertical:2, borderRadius:999 },
-  codeBadgeText: { fontFamily:Platform.OS==="ios"?"Menlo":"monospace", fontSize:10, fontWeight:"700", color:"#065f46" },
   logoutBtn: { borderWidth:1, borderColor:"#e2e8f0", paddingHorizontal:12, paddingVertical:6, borderRadius:8 },
   logoutText: { fontSize:12, color:"#64748b" },
   tabRow: { flexDirection:"row", gap:8, marginBottom:12 },
