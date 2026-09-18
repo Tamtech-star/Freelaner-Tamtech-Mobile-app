@@ -160,11 +160,24 @@ export async function acknowledgePayment(payload: {
   receiptUrl?: string;
   notes?: string;
 }): Promise<{ message?: string }> {
-  const res = await api.post("/portal/commissions/acknowledge", payload);
-  if (!res.data || res.data.error) {
-    throw new Error(res.data?.error || "Failed to acknowledge payment.");
+  try {
+    const res = await api.post("/portal/commissions/acknowledge", payload);
+    if (!res.data || res.data.error) {
+      throw new Error(res.data?.error || "Failed to acknowledge payment.");
+    }
+    return res.data;
+  } catch (err: any) {
+    // A guessed/wrong payment code returns 404 — surface a friendly message
+    // instead of the raw axios "Request failed with status code 404".
+    if (err?.response?.status === 404) {
+      throw new Error(
+        "Wrong payment code. Kindly check your email for the correct payment code for the selected lead."
+      );
+    }
+    const serverMessage = err?.response?.data?.error;
+    if (serverMessage) throw new Error(serverMessage);
+    throw err;
   }
-  return res.data;
 }
 
 // The endpoint returns a generated PDF, so fetch raw bytes and let the caller
