@@ -10,11 +10,13 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Modal,
 } from "react-native"
 import { Link, router } from "expo-router"
 import { LinearGradient } from "expo-linear-gradient"
 import { Eye, EyeOff } from "lucide-react-native"
 import { useAuthStore } from "../src/store/authStore"
+import { forgotPassword } from "../src/api/auth"
 import { COLORS, SHADOWS } from "../src/constants/config"
 import { useAppTheme } from "../src/theme/theme"
 
@@ -24,6 +26,11 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const { login, isLoading } = useAuthStore()
+  const [forgotOpen, setForgotOpen] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState("")
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotDone, setForgotDone] = useState(false)
+  const [forgotError, setForgotError] = useState<string | null>(null)
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -45,6 +52,37 @@ export default function LoginScreen() {
     } else {
       Alert.alert("Login Failed", result.error || "Invalid credentials.")
     }
+  }
+
+  // ── Forgot Password ──
+  const openForgotPassword = () => {
+    setForgotEmail(email)
+    setForgotDone(false)
+    setForgotError(null)
+    setForgotOpen(true)
+  }
+
+  const handleForgotSubmit = async () => {
+    if (!forgotEmail.trim()) {
+      setForgotError("Please enter your registered email.")
+      return
+    }
+    setForgotLoading(true)
+    setForgotError(null)
+    try {
+      await forgotPassword(forgotEmail.trim())
+      setForgotDone(true)
+    } catch (err: any) {
+      setForgotError(err.message || "Failed to send login code. Please try again.")
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
+  const closeForgot = () => {
+    setForgotOpen(false)
+    setForgotDone(false)
+    setForgotError(null)
   }
 
   // Dev quick-access: bypass login to preview screens
@@ -146,6 +184,10 @@ export default function LoginScreen() {
               )}
             </LinearGradient>
           </TouchableOpacity>
+
+          <TouchableOpacity onPress={openForgotPassword} style={styles.forgotLink}>
+            <Text style={styles.forgotLinkText}>Forgot Password?</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Dev Quick Access - Remove this section before production */}
@@ -188,6 +230,49 @@ export default function LoginScreen() {
           </Link>
         </View>
       </ScrollView>
+
+      <Modal visible={forgotOpen} transparent animationType="fade" onRequestClose={closeForgot}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {forgotDone ? (
+              <>
+                <View style={styles.modalCheck}><Text style={styles.modalCheckText}>✓</Text></View>
+                <Text style={[styles.modalTitle, { color: colors.heading }]}>Kindly check your email</Text>
+                <Text style={[styles.modalBody, { color: colors.muted }]}>
+                  We've sent your login code reminder to {forgotEmail.trim()}.
+                </Text>
+                <TouchableOpacity onPress={closeForgot} style={styles.modalPrimaryBtn}>
+                  <Text style={styles.modalPrimaryBtnText}>Done</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.modalTitle, { color: colors.heading }]}>Forgot Password</Text>
+                <Text style={[styles.modalBody, { color: colors.muted }]}>
+                  Enter your registered email and we'll send you a reminder with your login code.
+                </Text>
+                <TextInput
+                  style={[styles.modalInput, { color: colors.heading, backgroundColor: colors.input, borderColor: colors.border }]}
+                  placeholder="Your registered email"
+                  placeholderTextColor={COLORS.placeholder}
+                  value={forgotEmail}
+                  onChangeText={setForgotEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {forgotError && <Text style={styles.modalError}>{forgotError}</Text>}
+                <TouchableOpacity onPress={handleForgotSubmit} disabled={forgotLoading} style={styles.modalPrimaryBtn}>
+                  {forgotLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalPrimaryBtnText}>Send Login Code</Text>}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={closeForgot} style={styles.modalCancel}>
+                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   )
 }
@@ -347,4 +432,18 @@ const styles = StyleSheet.create({
     color: COLORS.gradientStart,
     fontWeight: "600",
   },
+  forgotLink: { alignSelf: "center", marginTop: 16 },
+  forgotLinkText: { fontSize: 13, fontWeight: "600", color: COLORS.gradientStart },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center", padding: 24 },
+  modalCard: { width: "100%", maxWidth: 420, borderRadius: 16, padding: 24, borderWidth: 1, ...SHADOWS.card },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: COLORS.heading, marginBottom: 6, textAlign: "center" },
+  modalBody: { fontSize: 13, color: COLORS.muted, textAlign: "center", lineHeight: 19, marginBottom: 18 },
+  modalInput: { borderWidth: 1, borderColor: COLORS.inputBorder, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: COLORS.heading, backgroundColor: COLORS.inputBg, marginBottom: 12 },
+  modalError: { fontSize: 12, fontWeight: "600", color: "#991b1b", textAlign: "center", marginBottom: 10 },
+  modalPrimaryBtn: { backgroundColor: COLORS.gradientStart, paddingVertical: 13, borderRadius: 8, alignItems: "center", marginTop: 4 },
+  modalPrimaryBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  modalCancel: { alignItems: "center", marginTop: 12 },
+  modalCancelText: { fontSize: 13, fontWeight: "600", color: COLORS.muted },
+  modalCheck: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#d1fae5", alignItems: "center", justifyContent: "center", alignSelf: "center", marginBottom: 12 },
+  modalCheckText: { fontSize: 26, color: "#059669", fontWeight: "700" },
 })
