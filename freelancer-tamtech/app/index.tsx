@@ -82,12 +82,6 @@ export default function Index() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.topLine}>
-            <Text style={styles.topLabel}>TAMTECH TOOLS LIMITED</Text>
-            <View style={styles.topDot} />
-            <Text style={styles.topMeta}>ELECTRIC MOBILITY</Text>
-          </View>
-
           <View style={styles.hero}>
             <View style={styles.logoLockup}>
               <Animated.View style={[styles.markWrap, markStyle]}>
@@ -97,6 +91,12 @@ export default function Index() {
                 <Image source={require("../assets/images/logo-text.png")} style={styles.logoText} resizeMode="contain" />
               </Animated.View>
             </View>
+
+            <Animated.View style={[styles.topLine, contentStyle]}>
+              <Text style={styles.topLabel}>TAMTECH TOOLS LIMITED</Text>
+              <View style={styles.topDot} />
+              <Text style={styles.topMeta}>ELECTRIC MOBILITY</Text>
+            </Animated.View>
 
             <Animated.View style={[styles.messageBlock, contentStyle]}>
               <Text style={styles.kicker}>MOVE WITH PURPOSE</Text>
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F7F9F7" },
   screen: { flex: 1, backgroundColor: "#F7F9F7" },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 22, paddingBottom: 24 },
-  topLine: { flexDirection: "row", alignItems: "center", gap: 9 },
+  topLine: { flexDirection: "row", alignItems: "center", gap: 9, marginTop: 20 },
   topLabel: { color: "#152B27", fontSize: 10, fontWeight: "900", letterSpacing: 1.4 },
   topDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#58A85C" },
   topMeta: { color: "#81918A", fontSize: 9, fontWeight: "700", letterSpacing: 1.1 },
