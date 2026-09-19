@@ -10,13 +10,14 @@ import {
   RefreshControl,
   StyleSheet,
   Platform,
+  Linking,
 } from "react-native";
 import { router } from "expo-router";
 import DropDownPicker from "react-native-dropdown-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { ClipboardList, Wallet, FileText, CheckCircle, Clock, CreditCard, XCircle, Check } from "lucide-react-native";
+import { ClipboardList, Wallet, FileText, CheckCircle, Clock, CreditCard, XCircle, Check, MessageCircle } from "lucide-react-native";
 import { useAuthStore } from "../../src/store/authStore";
 import { COLORS, SHADOWS } from "../../src/constants/config";
 import { useAppTheme } from "../../src/theme/theme";
@@ -356,6 +357,10 @@ export default function FreelancerDashboard() {
   
   const handleLogout = async () => { await logout(); router.replace("/login"); };
 
+  const openWhatsApp = useCallback(() => {
+    void Linking.openURL("whatsapp://send?phone=254118673848")
+  }, []);
+
   // Lead submit 
   const handleLeadSubmit = async () => {
     if (!leadForm.customerFullName.trim() || !leadForm.customerPhone.trim() || !leadForm.bikeModel || !leadForm.paymentType) {
@@ -430,7 +435,7 @@ export default function FreelancerDashboard() {
       <ScrollView 
         ref={scrollRef}
         style={[s.scroll, { backgroundColor: colors.bg }]}
-        contentContainerStyle={{ paddingBottom: activeTab === "workflow" && workflowStage === 1 ? 120 : 50 }}
+        contentContainerStyle={{ paddingBottom: activeTab === "workflow" && workflowStage === 1 ? 120 : 90 }}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled={true}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(activeCode,true).finally(()=>setRefreshing(false)); }} tintColor={COLORS.gradientStart} />}
@@ -692,6 +697,15 @@ export default function FreelancerDashboard() {
           </TouchableOpacity>
         </View>
       )}
+
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Contact TamTech support on WhatsApp"
+        onPress={openWhatsApp}
+        style={[s.whatsappFab, { bottom: insets.bottom + (activeTab === "workflow" && workflowStage === 1 ? 96 : 24) }]}
+      >
+        <MessageCircle size={24} color="#FFFFFF" fill="#FFFFFF" strokeWidth={1.8} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -775,6 +789,7 @@ const s = StyleSheet.create({
   submitBtn: { marginTop:16, backgroundColor:COLORS.gradientStart, paddingVertical:14, borderRadius:12, alignItems:"center" },
   submitBtnText: { color:"#fff", fontSize:15, fontWeight:"700" },
   stickySubmitBar: { position:"absolute", bottom:0, left:0, right:0, paddingHorizontal:16, paddingTop:10, borderTopWidth:1, borderTopColor:"#e2e8f0", backgroundColor:"#fff", shadowColor:"#000", shadowOpacity:0.08, shadowRadius:8, shadowOffset:{width:0,height:-2}, elevation:8 },
+  whatsappFab: { position:"absolute", right:16, width:52, height:52, borderRadius:26, alignItems:"center", justifyContent:"center", backgroundColor:"#25D366", shadowColor:"#000", shadowOpacity:0.2, shadowRadius:6, shadowOffset:{width:0,height:3}, elevation:6 },
   filePickerBtn: { borderWidth:1, borderColor:"#cbd5e1", borderRadius:8, borderStyle:"dashed", paddingVertical:14, alignItems:"center", backgroundColor:"#f8fafc" },
   filePickerText: { fontSize:13, color:"#64748b" },
   fileAttached: { flexDirection:"row", alignItems:"center", justifyContent:"space-between", borderWidth:1, borderColor:"#cbd5e1", borderRadius:8, padding:10, backgroundColor:"#f0fdf4" },
