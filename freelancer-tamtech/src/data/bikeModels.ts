@@ -39,14 +39,22 @@ export const BIKE_MODELS: BikeModel[] = [
         name: "Blazing Blue",
         swatch: "#2387FF",
         available: true,
-        images: [require("../../assets/images/bikes/blue.jpeg")],
+        images: [
+          require("../../assets/images/bikes/blue.jpeg"),
+          require("../../assets/images/bikes/blue2.jpeg"),
+          require("../../assets/images/bikes/blue3.jpeg"),
+        ],
       },
       {
         id: "yellow",
         name: "Fiery Yellow",
         swatch: "#FFD42A",
-        available: false,
-        images: [],
+        available: true,
+        images: [
+          require("../../assets/images/bikes/yellow.jpeg"),
+          require("../../assets/images/bikes/yellow2.jpeg"),
+          require("../../assets/images/bikes/yellow3.jpeg"),
+        ],
       },
       {
         id: "green",
