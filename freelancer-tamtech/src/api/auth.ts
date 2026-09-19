@@ -129,3 +129,23 @@ export async function registerFreelancer(
     throw err
   }
 }
+
+//  Forgot Password — emails a login-code reminder (code is NOT returned here)
+export async function forgotPassword(email: string): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const response = await api.post<{ ok: boolean; message?: string; error?: string }>(
+      '/auth/forgot-password',
+      { email }
+    )
+
+    if (response.data.error) {
+      throw new Error(response.data.error)
+    }
+
+    return response.data
+  } catch (err: any) {
+    const serverMessage = err?.response?.data?.error
+    if (serverMessage) throw new Error(serverMessage)
+    throw err
+  }
+}
