@@ -17,6 +17,7 @@ import {
   storeAuthenticatedRoute,
 } from "../src/navigation/routeStorage"
 import { ThemeProvider } from "../src/theme/theme"
+import UpdatePrompt from "../src/components/UpdatePrompt"
 
 export default function RootLayout() {
   const { isLoading, isAuthenticated, role, restoreSession } = useAuthStore()
@@ -111,31 +112,30 @@ export default function RootLayout() {
     }
   }, [authenticatedPath, isAuthenticated, isLoading, navigationRestored, role, startupRestore])
 
-  if (isLoading || !navigationRestored) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={COLORS.gradientStart} />
-        <StatusBar style="auto" />
-      </View>
-    )
-  }
-
   return (
     <ThemeProvider>
       <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login" />
-        {isAuthenticated && role === "sales_agent" ? (
-          <Stack.Screen name="(sales-record)" />
-        ) : isAuthenticated && role === "admin" ? (
-          <Stack.Screen name="(admin)" />
-        ) : isAuthenticated && role === "freelancer" ? (
-          <Stack.Screen name="(freelancer)" />
-        ) : null}
-        <Stack.Screen name="(public)" options={{ presentation: "modal" }} />
-      </Stack>
+        {isLoading || !navigationRestored ? (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={COLORS.gradientStart} />
+            <StatusBar style="auto" />
+          </View>
+        ) : (
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="login" />
+            {isAuthenticated && role === "sales_agent" ? (
+              <Stack.Screen name="(sales-record)" />
+            ) : isAuthenticated && role === "admin" ? (
+              <Stack.Screen name="(admin)" />
+            ) : isAuthenticated && role === "freelancer" ? (
+              <Stack.Screen name="(freelancer)" />
+            ) : null}
+            <Stack.Screen name="(public)" options={{ presentation: "modal" }} />
+          </Stack>
+        )}
         <StatusBar style="auto" />
+        <UpdatePrompt />
       </>
     </ThemeProvider>
   )
