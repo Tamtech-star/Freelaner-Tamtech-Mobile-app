@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { BarChart3, Building2, Handshake } from "lucide-react-native"
 import { getAllSalesLocalFirst, syncAllSalesNow } from "../../src/api/admin"
+import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 const BRAND_BLUE = "#2881FA"
@@ -22,7 +23,7 @@ export default function SalesDashboardScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
-  const load = useCallback(async () => {
+  const loadLocalOnly = useCallback(async () => {
     try {
       const all = await getAllSalesLocalFirst()
       setTotalCount(all.length)
@@ -35,11 +36,33 @@ export default function SalesDashboardScreen() {
       // counts will remain null, handled in UI
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const fetchNetwork = useCallback(async () => {
+    try {
+      const all = await syncAllSalesNow()
+      setTotalCount(all.length)
+      setDirectCount(all.filter((sale) => sale.submission_type === "direct_sale").length)
+      setFreelancerCount(all.filter((sale) => sale.submission_type === "freelancer_lead").length)
+    } catch {
+      // silent — keep whatever local/cached counts are already showing
+    }
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true
+      loadLocalOnly().then(() => {
+        if (isActive) fetchNetwork()
+      })
+      const unsub = subscribeToOfflineData(loadLocalOnly)
+      return () => {
+        unsub()
+        isActive = false
+      }
+    }, [loadLocalOnly, fetchNetwork])
+  )
 
   const onRefresh = async () => {
     setRefreshing(true)
