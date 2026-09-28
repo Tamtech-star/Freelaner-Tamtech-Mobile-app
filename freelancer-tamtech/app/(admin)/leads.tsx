@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useCallback, useMemo } from "react"
 import {
   View,
   Text,
@@ -11,8 +11,9 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { fetchAdminLeadsCsv, getAdminLeadsLocalFirst, syncAdminLeadsNow, type LeadRow } from "../../src/api/admin"
+import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { downloadCsvFile } from "../../src/utils/csvDownload"
 
@@ -35,7 +36,7 @@ export default function LeadsScreen() {
   const [downloading, setDownloading] = useState(false)
   const [search, setSearch] = useState("")
 
-  const load = useCallback(async () => {
+  const loadLocalOnly = useCallback(async () => {
     try {
       setError(null)
       const data = await getAdminLeadsLocalFirst()
@@ -44,11 +45,31 @@ export default function LeadsScreen() {
       setError(err?.response?.data?.error || err?.message || "Failed to load leads.")
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const fetchNetwork = useCallback(async () => {
+    try {
+      setLeads(await syncAdminLeadsNow())
+      setError(null)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Failed to sync leads.")
+    }
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true
+      loadLocalOnly().then(() => {
+        if (isActive) fetchNetwork()
+      })
+      const unsub = subscribeToOfflineData(loadLocalOnly)
+      return () => {
+        unsub()
+        isActive = false
+      }
+    }, [loadLocalOnly, fetchNetwork])
+  )
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -160,7 +181,7 @@ export default function LeadsScreen() {
         {error && (
           <View style={s.errorWrap}>
             <Text style={s.errorText}>{error}</Text>
-            <TouchableOpacity onPress={load} style={s.retryBtn}>
+            <TouchableOpacity onPress={loadLocalOnly} style={s.retryBtn}>
               <Text style={s.retryBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>

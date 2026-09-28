@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useCallback, useMemo } from "react"
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   FlatList,
 } from "react-native"
 import { Download } from "lucide-react-native"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { getFreelancersLocalFirst, syncFreelancersNow, deleteFreelancer, type FreelancerRow } from "../../src/api/admin"
 import { getFreelancerDashboard, type DashboardPayload } from "../../src/api/portal"
 import { COLORS, SHADOWS } from "../../src/constants/config"
@@ -43,7 +43,7 @@ export default function FreelancersScreen() {
   const [dashboardLoading, setDashboardLoading] = useState(false)
   const [dashboardError, setDashboardError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const loadLocalOnly = useCallback(async () => {
     try {
       setError(null)
       const data = await getFreelancersLocalFirst()
@@ -52,14 +52,31 @@ export default function FreelancersScreen() {
       setError(err?.response?.data?.error || err?.message || "Failed to load freelancers.")
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }, [])
 
-  useEffect(() => {
-    load()
-    return subscribeToOfflineData(load)
-  }, [load])
+  const fetchNetwork = useCallback(async () => {
+    try {
+      setFreelancers(await syncFreelancersNow())
+      setError(null)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || "Failed to sync freelancers.")
+    }
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true
+      loadLocalOnly().then(() => {
+        if (isActive) fetchNetwork()
+      })
+      const unsub = subscribeToOfflineData(loadLocalOnly)
+      return () => {
+        unsub()
+        isActive = false
+      }
+    }, [loadLocalOnly, fetchNetwork])
+  )
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -179,7 +196,7 @@ export default function FreelancersScreen() {
               <TextInput placeholder="Search by name, email or code..." placeholderTextColor="#94a3b8" value={search} onChangeText={setSearch} style={s.searchInput} />
             </View>
             {loading && <View style={s.centerWrap}><ActivityIndicator size="large" color={COLORS.gradientStart} /></View>}
-            {error && <View style={s.errorWrap}><Text style={s.errorText}>{error}</Text><TouchableOpacity onPress={load} style={s.retryBtn}><Text style={s.retryBtnText}>Retry</Text></TouchableOpacity></View>}
+            {error && <View style={s.errorWrap}><Text style={s.errorText}>{error}</Text><TouchableOpacity onPress={loadLocalOnly} style={s.retryBtn}><Text style={s.retryBtnText}>Retry</Text></TouchableOpacity></View>}
           </>
         )}
         ListEmptyComponent={!loading ? <Text style={s.emptyText}>{search ? "No freelancers match your search." : "No freelancers registered yet."}</Text> : null}

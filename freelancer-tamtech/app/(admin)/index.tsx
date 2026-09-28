@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 import {
   View,
   Text,
@@ -8,11 +8,18 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native"
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { Search, BarChart3, Wallet, Users, ShieldUser } from "lucide-react-native"
 import { useAuthStore } from "../../src/store/authStore"
-import { getAdminDashboardLocalFirst, syncAdminDashboardNow } from "../../src/api/admin"
-import type { AdminMetrics } from "../../src/api/admin"
+import {
+  getFreelancersLocalFirst,
+  syncFreelancersNow,
+  getAdminLeadsLocalFirst,
+  syncAdminLeadsNow,
+  getConvertedSalesLocalFirst,
+  syncConvertedSalesNow,
+} from "../../src/api/admin"
+import { subscribeToOfflineData } from "../../src/offline/syncWorker"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 
 // Web-app brand gradient: from-[#2881FA] to-[#45E0D7]
@@ -21,41 +28,64 @@ const BRAND_TEAL = "#45E0D7"
 
 export default function AdminDashboardScreen() {
   const { user, logout } = useAuthStore()
-  const [metrics, setMetrics] = useState<AdminMetrics["metrics"] | null>(null)
+  const [freelancerCount, setFreelancerCount] = useState<number | null>(null)
+  const [leadCount, setLeadCount] = useState<number | null>(null)
+  const [convertedCount, setConvertedCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const load = useCallback(async () => {
-    try {
-      setError(null)
-      const data = await getAdminDashboardLocalFirst()
-      setMetrics(data.metrics)
-    } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || "Failed to load dashboard.")
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
+  const loadLocalOnly = useCallback(async () => {
+    const [f, l, c] = await Promise.allSettled([
+      getFreelancersLocalFirst(),
+      getAdminLeadsLocalFirst(),
+      getConvertedSalesLocalFirst(),
+    ])
+    if (f.status === "fulfilled") setFreelancerCount(f.value.length)
+    if (l.status === "fulfilled") setLeadCount(l.value.length)
+    if (c.status === "fulfilled") setConvertedCount(c.value.length)
+    setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  const fetchNetwork = useCallback(async () => {
+    const [f, l, c] = await Promise.allSettled([
+      syncFreelancersNow(),
+      syncAdminLeadsNow(),
+      syncConvertedSalesNow(),
+    ])
+    if (f.status === "fulfilled") setFreelancerCount(f.value.length)
+    if (l.status === "fulfilled") setLeadCount(l.value.length)
+    if (c.status === "fulfilled") setConvertedCount(c.value.length)
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true
+      loadLocalOnly().then(() => {
+        if (isActive) fetchNetwork()
+      })
+      const unsub = subscribeToOfflineData(loadLocalOnly)
+      return () => {
+        unsub()
+        isActive = false
+      }
+    }, [loadLocalOnly, fetchNetwork])
+  )
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
     try {
-      setMetrics((await syncAdminDashboardNow()).metrics)
+      await fetchNetwork()
     } finally {
       setRefreshing(false)
     }
-  }, [])
+  }, [fetchNetwork])
 
   const handleLogout = async () => {
     await logout()
     router.replace("/login")
   }
 
-  const fmt = (n: number) => n.toLocaleString()
+  const fmt = (n: number | null) => (n !== null ? n.toLocaleString() : "...")
 
   const MetricCard = ({
     label,
@@ -64,7 +94,7 @@ export default function AdminDashboardScreen() {
     onPress,
   }: {
     label: string
-    value: number
+    value: number | null
     color: string
     onPress?: () => void
   }) => (
@@ -182,48 +212,31 @@ export default function AdminDashboardScreen() {
           </View>
         )}
 
-        {error && (
-          <View style={s.errorWrap}>
-            <Text style={s.errorText}>{error}</Text>
-            <TouchableOpacity onPress={load} style={s.retryBtn}>
-              <Text style={s.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Platform Metrics — 6 cards; 3 visible & clickable */}
-        {metrics && (
-          <View style={s.metricsSection}>
-            <Text style={s.sectionTitle}>Platform Metrics</Text>
-            <View style={s.metricsGrid}>
-              {/* ── VISIBLE & CLICKABLE ── */}
-              <MetricCard
-                label="Total Freelancers"
-                value={metrics.total_freelancers}
-                color="#6366f1"
-                onPress={() => router.push("/(admin)/freelancers")}
-              />
-              <MetricCard
-                label="Total Leads"
-                value={metrics.total_leads}
-                color="#3b82f6"
-                onPress={() => router.push("/(admin)/leads")}
-              />
-              <MetricCard
-                label="Converted Sales"
-                value={metrics.converted_sales}
-                color="#f59e0b"
-                onPress={() => router.push("/(admin)/sales-dashboard")}
-              />
-
-              {/* ── COMMENTED OUT (not required visually) ──
-              <MetricCard label="Active Freelancers"    value={metrics.active_freelancers}    color="#10b981" />
-              <MetricCard label="Pending Validations"   value={metrics.pending_validations}   color="#ef4444" />
-              <MetricCard label="Pending Payments"      value={metrics.pending_payments}      color="#8b5cf6" />
-              */}
-            </View>
+        <View style={s.metricsSection}>
+          <Text style={s.sectionTitle}>Platform Metrics</Text>
+          <View style={s.metricsGrid}>
+            {/* ── VISIBLE & CLICKABLE ── */}
+            <MetricCard
+              label="Total Freelancers"
+              value={freelancerCount}
+              color="#6366f1"
+              onPress={() => router.push("/(admin)/freelancers")}
+            />
+            <MetricCard
+              label="Total Leads"
+              value={leadCount}
+              color="#3b82f6"
+              onPress={() => router.push("/(admin)/leads")}
+            />
+            <MetricCard
+              label="Converted Sales"
+              value={convertedCount}
+              color="#f59e0b"
+              onPress={() => router.push("/(admin)/sales-dashboard")}
+            />
           </View>
-        )}
+        </View>
       </ScrollView>
     </View>
   )
