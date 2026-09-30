@@ -86,26 +86,36 @@ async function pushPending(): Promise<number> {
   return synced
 }
 
-async function performSync(): Promise<{ pulled: boolean; pushed: number }> {
+async function performSync(forcePull: boolean): Promise<{ pulled: boolean; pushed: number }> {
   const network = await NetInfo.fetch()
   if (!shouldRunRemoteSync(network)) return { pulled: false, pushed: 0 }
   const pushed = await pushPending()
+  const cursorFresh = !isSyncCursorStale(await getSyncCursor("last_pull_at"))
+  // Pull when forced (manual refresh), when the cursor is stale (background),
+  // or when we just pushed pending records — so freshly minted CNV codes replace
+  // the LOCAL ones on the device immediately rather than waiting for a later pull.
+  if (!forcePull && cursorFresh && pushed === 0) return { pulled: false, pushed }
   await pullChanges()
   return { pulled: true, pushed }
 }
 
-export function runSyncWorker(): Promise<{ pulled: boolean; pushed: number }> {
+function runSyncWorkerInternal(forcePull: boolean): Promise<{ pulled: boolean; pushed: number }> {
   if (activeSync) return activeSync
-  activeSync = performSync().finally(() => {
+  activeSync = performSync(forcePull).finally(() => {
     activeSync = null
   })
   return activeSync
 }
 
-export async function runSyncWorkerIfStale(): Promise<{ pulled: boolean; pushed: number }> {
-  const lastPullAt = await getSyncCursor("last_pull_at")
-  if (!isSyncCursorStale(lastPullAt)) return { pulled: false, pushed: 0 }
-  return runSyncWorker()
+export function runSyncWorker(): Promise<{ pulled: boolean; pushed: number }> {
+  // Full/manual sync: always push pending AND always pull fresh data.
+  return runSyncWorkerInternal(true)
+}
+
+export function runSyncWorkerIfStale(): Promise<{ pulled: boolean; pushed: number }> {
+  // Background sync (reconnect, stale-while-revalidate): ALWAYS push pending
+  // offline submissions immediately; only the pull is rate-limited by the cursor.
+  return runSyncWorkerInternal(false)
 }
 
 export function startSyncWorker(): () => void {
