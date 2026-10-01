@@ -7,6 +7,7 @@ import {
   getSyncCursor,
   getLocalSalesRecords,
   removeSyncedPendingSalesRecord,
+  setSalesRecordSyncError,
   setSyncCursor,
   upsertFreelancers,
   upsertSalesRecords,
@@ -18,6 +19,7 @@ export type PersistedFile = { uri: string; name: string; type: string }
 export type OfflineSubmissionPayload = Record<string, string | PersistedFile | null>
 
 const dataListeners = new Set<() => void>()
+const syncErrorListeners = new Set<() => void>()
 let activeSync: Promise<{ pulled: boolean; pushed: number }> | null = null
 
 export function subscribeToOfflineData(listener: () => void): () => void {
@@ -27,6 +29,15 @@ export function subscribeToOfflineData(listener: () => void): () => void {
 
 export function notifyDataChanged(): void {
   for (const listener of dataListeners) listener()
+}
+
+export function subscribeToSyncErrors(listener: () => void): () => void {
+  syncErrorListeners.add(listener)
+  return () => syncErrorListeners.delete(listener)
+}
+
+function notifySyncError(): void {
+  for (const listener of syncErrorListeners) listener()
 }
 
 function appendPayload(formData: FormData, payload: OfflineSubmissionPayload): void {
@@ -79,8 +90,14 @@ async function pushPending(): Promise<number> {
       await removeSyncedPendingSalesRecord(row.id)
       synced += 1
       notifyDataChanged()
-    } catch {
-      // Leave the row pending. A later connectivity event retries it.
+    } catch (err) {
+      // Leave the row pending, but record the reason so the sales-record screen
+      // can surface it. Emit on the dedicated sync-error channel (not
+      // notifyDataChanged) so a persistently failing record can't trigger a
+      // re-sync loop through the local-first read's stale-while-revalidate.
+      const message = (err as any)?.response?.data?.error || (err as any)?.message || "Sync failed."
+      await setSalesRecordSyncError(row.id, message).catch(() => undefined)
+      notifySyncError()
     }
   }
   return synced

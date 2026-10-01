@@ -23,7 +23,7 @@ const EXTENDED_SALES_COLUMNS = [
   ["chassis_number", "TEXT"], ["finance_details", "TEXT"], ["bike_color", "TEXT"],
   ["has_insurance", "INTEGER"], ["insurance_type", "TEXT"], ["has_tracker", "INTEGER"],
   ["tracker_duration", "TEXT"], ["referral_name", "TEXT"], ["deployment_name", "TEXT"],
-  ["branch", "TEXT"],
+  ["branch", "TEXT"], ["sync_error", "TEXT"],
 ] as const
 
 let databasePromise: Promise<SQLiteDatabase> | null = null
@@ -169,6 +169,28 @@ export async function getPendingSalesRecords(): Promise<LocalSalesRow[]> {
 }
 
 export async function removeSyncedPendingSalesRecord(id: string): Promise<void> {
+  const db = await initializeDatabase()
+  await db.runAsync("DELETE FROM sales_records WHERE id = ? AND sync_status = 'pending'", id)
+}
+
+export type FailedSyncRecord = SalesRecordItem & {
+  sync_error: string
+  payload_json: string | null
+}
+
+export async function setSalesRecordSyncError(id: string, message: string): Promise<void> {
+  const db = await initializeDatabase()
+  await db.runAsync("UPDATE sales_records SET sync_error = ? WHERE id = ?", message, id)
+}
+
+export async function getFailedSyncRecords(): Promise<FailedSyncRecord[]> {
+  const db = await initializeDatabase()
+  return db.getAllAsync<FailedSyncRecord>(
+    "SELECT * FROM sales_records WHERE sync_status = 'pending' AND sync_error IS NOT NULL AND sync_error != '' ORDER BY updated_at ASC"
+  )
+}
+
+export async function removePendingSalesRecord(id: string): Promise<void> {
   const db = await initializeDatabase()
   await db.runAsync("DELETE FROM sales_records WHERE id = ? AND sync_status = 'pending'", id)
 }

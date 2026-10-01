@@ -23,7 +23,8 @@ import api from "../../src/api/client"
 import { getSalesHistoryLocalFirst, syncSalesHistoryNow } from "../../src/api/salesHistory"
 import { COLORS, SHADOWS } from "../../src/constants/config"
 import { getFreelancerCardName } from "../../src/utils/salesDisplay"
-import { subscribeToOfflineData } from "../../src/offline/syncWorker"
+import { runSyncWorker, subscribeToOfflineData, subscribeToSyncErrors } from "../../src/offline/syncWorker"
+import { getFailedSyncRecords, removePendingSalesRecord, type FailedSyncRecord } from "../../src/offline/database"
 import { downloadSalesCsv, shareSalesCsv } from "../../src/utils/salesCsvDownload"
 import { SalesDateFilterControl } from "../../src/components/SalesDateFilterControl"
 import { applySalesDateFilter, DEFAULT_SALES_DATE_FILTER, type SalesDateFilter } from "../../src/utils/salesDateFilter"
@@ -61,6 +62,8 @@ export default function SalesRecordHome() {
   const [downloading, setDownloading] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [dateFilter, setDateFilter] = useState<SalesDateFilter>(DEFAULT_SALES_DATE_FILTER)
+  const [failedRecords, setFailedRecords] = useState<FailedSyncRecord[]>([])
+  const [reviewOpen, setReviewOpen] = useState(false)
 
   const loadHistory = useCallback(async () => {
     try {
@@ -76,11 +79,29 @@ export default function SalesRecordHome() {
     }
   }, [])
 
-  // Load on mount
+  const loadFailed = useCallback(async () => {
+    try {
+      setFailedRecords(await getFailedSyncRecords())
+    } catch {
+      setFailedRecords([])
+    }
+  }, [])
+
+  // Load on mount; refresh history + failed queue on data changes, and re-read
+  // the failed queue when a push fails (via the dedicated sync-error channel).
   useEffect(() => {
     loadHistory()
-    return subscribeToOfflineData(loadHistory)
-  }, [loadHistory])
+    loadFailed()
+    const unsubData = subscribeToOfflineData(() => {
+      loadHistory()
+      loadFailed()
+    })
+    const unsubError = subscribeToSyncErrors(loadFailed)
+    return () => {
+      unsubData()
+      unsubError()
+    }
+  }, [loadHistory, loadFailed])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
@@ -194,6 +215,69 @@ export default function SalesRecordHome() {
     }
   }, [])
 
+  const handleReRecord = useCallback(async (item: FailedSyncRecord) => {
+    try {
+      const payload = item.payload_json ? JSON.parse(item.payload_json) : {}
+      await removePendingSalesRecord(item.id)
+      setFailedRecords((prev) => prev.filter((f) => f.id !== item.id))
+      router.push({
+        pathname: "/(sales-record)/form",
+        params: {
+          customerType: payload.customerType || "individual",
+          customerFullName: payload.customerFullName || "",
+          customerIdNumber: payload.customerIdNumber || "",
+          customerPhone: payload.customerPhone || "",
+          kraPin: payload.kraPin || "",
+          customerLocation: payload.customerLocation || "",
+          bikeModel: payload.bikeModel || "",
+          bikeRegistrationNumber: payload.bikeRegistrationNumber || "",
+          chassisNumber: payload.chassisNumber || "",
+          paymentType: payload.paymentType || "cash",
+          financeDetails: payload.financeDetails || "",
+          bikeColor: payload.bikeColor || "",
+          hasInsurance: payload.hasInsurance && payload.hasInsurance !== "NO" ? payload.hasInsurance : "No",
+          hasTracker: payload.hasTracker && payload.hasTracker !== "NO" ? payload.hasTracker : "No",
+          referralName: payload.referralName || "",
+          deploymentName: payload.deploymentName || "",
+          invoiceNumber: payload.invoiceNumber || "",
+          branch: payload.branch || "",
+          saleDate: payload.saleDate || "",
+          quantity: payload.quantity || "1",
+        },
+      })
+    } catch (err: any) {
+      Alert.alert("Error", err?.message || "Failed to re-open the sale.")
+    }
+  }, [])
+
+  const handleRetry = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await runSyncWorker()
+      await loadFailed()
+    } finally {
+      setRefreshing(false)
+    }
+  }, [loadFailed])
+
+  const handleDismiss = useCallback((item: FailedSyncRecord) => {
+    Alert.alert(
+      "Discard failed sale?",
+      `${item.customer_name} (${item.conversion_code}) will be deleted from this device and will not sync.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await removePendingSalesRecord(item.id)
+            setFailedRecords((prev) => prev.filter((f) => f.id !== item.id))
+          },
+        },
+      ]
+    )
+  }, [])
+
   return (
     <View style={s.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -226,6 +310,19 @@ export default function SalesRecordHome() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {failedRecords.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setReviewOpen(true)}
+            style={s.syncErrorBanner}
+            activeOpacity={0.85}
+          >
+            <Text style={s.syncErrorBannerTitle}>
+              ⚠️ {failedRecords.length} sale{failedRecords.length !== 1 ? "s" : ""} failed to sync
+            </Text>
+            <Text style={s.syncErrorBannerSub}>Tap to review & fix</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Two Entry Cards */}
         <View style={s.cardRow}>
@@ -542,6 +639,57 @@ export default function SalesRecordHome() {
           </View>
         </View>
       </Modal>
+
+      {/* Failed sync review modal */}
+      <Modal visible={reviewOpen} animationType="slide" onRequestClose={() => setReviewOpen(false)}>
+        <View style={[s.modalScreen, { paddingTop: insets.top }]}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Failed to Sync</Text>
+          </View>
+          <View style={s.reviewSubheader}>
+            <Text style={s.reviewSubheaderText}>
+              These sales could not be uploaded. Re-record, retry, or discard each one.
+            </Text>
+          </View>
+          <FlatList
+            data={failedRecords}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 16 }}
+            renderItem={({ item }) => (
+              <View style={s.failedCard}>
+                <View style={s.failedRow}>
+                  <Text style={s.failedCustomer}>{item.customer_name}</Text>
+                  <Text style={s.failedCode}>{item.conversion_code}</Text>
+                </View>
+                <Text style={s.failedMeta}>
+                  #{item.sales_invoice_number} · {item.bike_model_sold} · {formatDate(item.sale_date)}
+                </Text>
+                <View style={s.failedReasonWrap}>
+                  <Text style={s.failedReasonLabel}>Reason</Text>
+                  <Text style={s.failedReasonText}>{item.sync_error}</Text>
+                </View>
+                <View style={s.failedActions}>
+                  <TouchableOpacity style={[s.failedBtn, s.failedBtnPrimary]} onPress={() => handleReRecord(item)}>
+                    <Text style={s.failedBtnPrimaryText}>Re-record</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.failedBtn, s.failedBtnSecondary]} onPress={handleRetry}>
+                    <Text style={s.failedBtnSecondaryText}>Retry</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.failedBtn, s.failedBtnDanger]} onPress={() => handleDismiss(item)}>
+                    <Text style={s.failedBtnDangerText}>Discard</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={<Text style={s.emptyText}>No failed sales.</Text>}
+          />
+          <View style={s.reviewFooter}>
+            <TouchableOpacity style={s.closeBtn} onPress={() => setReviewOpen(false)}>
+              <Text style={s.closeBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -782,4 +930,42 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
   docLinkArrow: { fontSize: 14, color: "#94a3b8" },
+
+  // Sync-failure banner + review modal
+  syncErrorBanner: {
+    backgroundColor: "#fef3c7",
+    borderWidth: 1,
+    borderColor: "#f59e0b",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+  },
+  syncErrorBannerTitle: { fontSize: 14, fontWeight: "700", color: "#92400e" },
+  syncErrorBannerSub: { marginTop: 2, fontSize: 12, color: "#b45309" },
+  reviewSubheader: { paddingHorizontal: 16, paddingVertical: 10 },
+  reviewSubheaderText: { fontSize: 13, color: "#64748b" },
+  failedCard: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  failedRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  failedCustomer: { fontSize: 15, fontWeight: "700", color: "#1e293b" },
+  failedCode: { fontFamily: "monospace", fontSize: 12, color: "#dc2626", fontWeight: "700" },
+  failedMeta: { marginTop: 4, fontSize: 12, color: "#64748b" },
+  failedReasonWrap: { marginTop: 10, backgroundColor: "#fef2f2", borderRadius: 8, padding: 10 },
+  failedReasonLabel: { fontSize: 10, color: "#b91c1c", textTransform: "uppercase", letterSpacing: 0.5 },
+  failedReasonText: { marginTop: 3, fontSize: 13, color: "#7f1d1d" },
+  failedActions: { flexDirection: "row", gap: 8, marginTop: 12 },
+  failedBtn: { flex: 1, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
+  failedBtnPrimary: { backgroundColor: "#1d4ed8" },
+  failedBtnPrimaryText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  failedBtnSecondary: { backgroundColor: "#eff6ff", borderWidth: 1, borderColor: "#bfdbfe" },
+  failedBtnSecondaryText: { color: "#1d4ed8", fontSize: 13, fontWeight: "700" },
+  failedBtnDanger: { backgroundColor: "#fef2f2", borderWidth: 1, borderColor: "#fecaca" },
+  failedBtnDangerText: { color: "#dc2626", fontSize: 13, fontWeight: "700" },
+  reviewFooter: { padding: 16 },
 })
