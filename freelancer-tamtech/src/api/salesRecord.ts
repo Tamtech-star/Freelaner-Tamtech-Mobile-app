@@ -85,3 +85,26 @@ export async function submitSalesRecord(
   const response = await api.post<SubmitSalesResponse>('/sales-record', formData)
   return response.data
 }
+
+//  Duplicate sale check (bike number / chassis number) 
+
+export interface DuplicateCheckResponse {
+  duplicate: boolean
+  field?: 'bikeRegistrationNumber' | 'chassisNumber'
+  value?: string
+  existingConversionCode?: string
+}
+
+export async function checkDuplicateSale(
+  bikeRegistrationNumber: string,
+  chassisNumber: string,
+  excludeId?: string
+): Promise<DuplicateCheckResponse> {
+  const params: string[] = []
+  if (bikeRegistrationNumber) params.push(`bikeRegistrationNumber=${encodeURIComponent(bikeRegistrationNumber)}`)
+  if (chassisNumber) params.push(`chassisNumber=${encodeURIComponent(chassisNumber)}`)
+  if (excludeId) params.push(`excludeId=${encodeURIComponent(excludeId)}`)
+  const qs = params.length ? `?${params.join('&')}` : ''
+  const response = await api.get<DuplicateCheckResponse>(`/sales-record/check-duplicate${qs}`)
+  return response.data
+}

@@ -23,6 +23,8 @@ import { insertPendingSalesRecord } from "../../src/offline/database"
 import { buildPendingSalesRecord } from "../../src/offline/syncCore"
 import { runSyncWorker, type OfflineSubmissionPayload } from "../../src/offline/syncWorker"
 import { compressImageForUpload } from "../../src/utils/imageCompression"
+import { findLocalDuplicateSale } from "../../src/utils/saleDuplicate"
+import { checkDuplicateSale } from "../../src/api/salesRecord"
 import api from "../../src/api/client"
 
 //  Constants 
@@ -400,6 +402,39 @@ export default function SalesRecordForm() {
     setSubmitting(true)
     setError(null)
     setSuccess(null)
+
+    // ── Duplicate sale check (bike number + chassis number) ──
+    // 1) Local DB first (instant, works offline).
+    const localDup = await findLocalDuplicateSale(
+      form.bikeRegistrationNumber,
+      form.chassisNumber,
+      editId,
+    ).catch(() => null)
+    if (localDup) {
+      setSubmitting(false)
+      const which = localDup.field === "bikeRegistrationNumber" ? "Bike number" : "Chassis number"
+      Alert.alert(
+        "Duplicate Sale Record",
+        `${which} ${localDup.value} is already recorded (${localDup.existingConversionCode}). This sale will not be saved.`
+      )
+      return
+    }
+    // 2) Server check (authoritative; best-effort when online).
+    try {
+      const live = await checkDuplicateSale(form.bikeRegistrationNumber, form.chassisNumber, editId)
+      if (live.duplicate) {
+        setSubmitting(false)
+        const which = live.field === "bikeRegistrationNumber" ? "Bike number" : "Chassis number"
+        Alert.alert(
+          "Duplicate Sale Record",
+          `${which} ${live.value} is already recorded (${live.existingConversionCode}). This sale will not be saved.`
+        )
+        return
+      }
+    } catch {
+      // Offline or the check endpoint is unavailable — the backend POST will still
+      // reject a duplicate with a 409 when this record syncs.
+    }
 
     try {
       const formattedInsurance = form.hasInsurance ? form.hasInsurance.toUpperCase() : "NO"
