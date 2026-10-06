@@ -174,6 +174,7 @@ export interface ConvertedSaleRow {
   paid_kes: number
   payment_status: string
   freelancer_name?: string | null
+  freelancer_phone?: string | null
   payment_type?: string | null
   invoice_photo_url: string | null
   agreement_photo_url?: string | null

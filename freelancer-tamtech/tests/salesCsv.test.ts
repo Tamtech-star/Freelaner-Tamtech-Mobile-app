@@ -7,6 +7,7 @@ const sale = {
   submission_type: "direct_sale",
   customer_name: 'Jane "JJ", Kamau',
   freelancer_name: null,
+  freelancer_phone: null,
   freight: "Nairobi",
   sales_agent_name: "Mary Agent",
   sales_invoice_number: "INV-200",
@@ -44,7 +45,7 @@ const sale = {
 test("createSalesCsv exports headers and safely escapes spreadsheet values", () => {
   const csv = createSalesCsv([sale])
 
-  assert.match(csv, /^\uFEFFSubmission Type,Customer Name,Freelancer Name,Invoice Number,Branch/)
+  assert.match(csv, /^\uFEFFSubmission Type,Customer Name,Freelancer Name,Freelancer Phone Number,Invoice Number,Branch/)
   assert.match(csv, /"Jane ""JJ"", Kamau"/)
   assert.match(csv, /Direct Sale/)
   assert.match(csv, /Cash/)
@@ -66,6 +67,17 @@ test("createSalesCsv protects formula-like values", () => {
   const csv = createSalesCsv([{ ...sale, customer_name: "=SUM(1,2)" }])
 
   assert.match(csv, /"'=SUM\(1,2\)"/)
+})
+
+test("createSalesCsv exports freelancer phone number for freelancer leads", () => {
+  const csv = createSalesCsv([{
+    ...sale,
+    submission_type: "freelancer_lead",
+    freelancer_name: "Jane Freelancer",
+    freelancer_phone: "0711222333",
+  }])
+
+  assert.match(csv, /Jane Freelancer,0711222333,INV-200/)
 })
 
 test("sanitizeCsvFileName creates a safe dated CSV name", () => {

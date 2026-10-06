@@ -3,6 +3,7 @@ export type SalesCsvRow = {
   submission_type: string
   customer_name: string
   freelancer_name?: string | null
+  freelancer_phone?: string | null
   freight: string
   sales_agent_name: string
   sales_invoice_number: string
@@ -41,6 +42,7 @@ const HEADERS = [
   "Submission Type",
   "Customer Name",
   "Freelancer Name",
+  "Freelancer Phone Number",
   "Invoice Number",
   "Branch",
   "Bike Model",
@@ -88,6 +90,7 @@ export function createSalesCsv(rows: SalesCsvRow[]): string {
     displaySubmissionType(row.submission_type),
     row.customer_name,
     row.freelancer_name || "",
+    row.freelancer_phone || "",
     row.sales_invoice_number,
     row.branch,
     row.bike_model_sold,
